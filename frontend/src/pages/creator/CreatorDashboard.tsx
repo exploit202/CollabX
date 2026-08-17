@@ -1,0 +1,325 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
+import { Card } from '../../components/common/Card';
+import { Badge } from '../../components/common/Badge';
+import { getCreatorDashboard, respondToInvitation, getCreatorAnalytics } from '../../lib/api';
+import {
+  Mail,
+  FolderKanban,
+  Search,
+  Loader2,
+  DollarSign,
+  Briefcase,
+  CheckCircle2,
+  Users,
+  Award,
+  Star,
+  TrendingUp,
+  AlertTriangle,
+  ArrowRight,
+  UserCheck
+} from 'lucide-react';
+
+export const CreatorDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const { formatCurrency } = useApp();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDashboard = async () => {
+    try {
+      const [dashRes, analyticsRes] = await Promise.all([
+        getCreatorDashboard().catch(() => null),
+        getCreatorAnalytics().catch(() => ({ success: false, data: null }))
+      ]);
+
+      if (dashRes?.success) {
+        setDashboardData(dashRes.data);
+      }
+      if (analyticsRes?.success) {
+        setAnalytics(analyticsRes.data);
+      }
+    } catch (err) {
+      console.error('Error fetching creator dashboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const handleResponse = async (id: string, status: 'accepted' | 'rejected' | 'negotiating') => {
+    try {
+      await respondToInvitation(id, status);
+      fetchDashboard();
+    } catch (err) {
+      console.error('Failed to respond to invitation:', err);
+    }
+  };
+
+  const checkAudienceMetricsCompletion = (profile: any) => {
+    if (!profile) return false;
+
+    const platforms: string[] = [];
+    if (Array.isArray(profile.platforms) && profile.platforms.length > 0) {
+      profile.platforms.forEach((item: any) => {
+        const key = (typeof item === 'string' ? item : item?.platform)?.toLowerCase();
+        if (key && ['youtube', 'instagram', 'twitter'].includes(key)) {
+          platforms.push(key);
+        }
+      });
+    } else if (profile.socialLinks || profile.platformLinks) {
+      const linksObj = { ...profile.platformLinks, ...profile.socialLinks };
+      ['youtube', 'instagram', 'twitter'].forEach((key) => {
+        if (linksObj[key]) platforms.push(key);
+      });
+    }
+
+    if (platforms.length === 0) return false;
+
+    const metrics = profile.audienceMetrics || {};
+
+    return platforms.every((p) => {
+      const m = metrics[p];
+      if (!m) return false;
+      if (p === 'youtube') {
+        return m.subscribers !== null && m.subscribers !== undefined &&
+               m.averageViews !== null && m.averageViews !== undefined &&
+               m.engagementRate !== null && m.engagementRate !== undefined;
+      }
+      if (p === 'instagram') {
+        return m.followers !== null && m.followers !== undefined &&
+               m.averageReelViews !== null && m.averageReelViews !== undefined &&
+               m.engagementRate !== null && m.engagementRate !== undefined;
+      }
+      if (p === 'twitter') {
+        return m.followers !== null && m.followers !== undefined &&
+               m.averageImpressions !== null && m.averageImpressions !== undefined &&
+               m.engagementRate !== null && m.engagementRate !== undefined;
+      }
+      return false;
+    });
+  };
+
+  const isProfileMetricsComplete = checkAudienceMetricsCompletion(dashboardData?.profile);
+
+  const stats = dashboardData?.stats || {
+    totalEarnings: 0,
+    brandInvitations: 0,
+    activeCampaigns: 0,
+    openNegotiations: 0
+  };
+
+  const creatorName = user?.fullName || user?.name || 'Creator';
+
+  return (
+    <div className="space-y-8">
+      {/* Welcome Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl">
+        <div className="space-y-2">
+          <Badge variant="purple" className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+            Creator Studio
+          </Badge>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+            Welcome back, {creatorName}!
+          </h1>
+          <p className="text-xs text-slate-300 max-w-lg">
+            Review incoming brand collaboration requests, update package pricing, and track your collaboration earnings and rating insights.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            to="/creator/requests"
+            className="px-5 py-3 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-xl transition-all shadow-lg flex items-center gap-2"
+          >
+            <Mail className="w-4 h-4" />
+            Brand Offers
+          </Link>
+          <Link
+            to="/creator/discover"
+            className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-2"
+          >
+            <Search className="w-4 h-4" />
+            Discover Briefs
+          </Link>
+          <Link
+            to="/creator/portfolio"
+            className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-2"
+          >
+            <FolderKanban className="w-4 h-4" />
+            Portfolio
+          </Link>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+        </div>
+      ) : (
+        <>
+          {/* PROFILE COMPLETION REMINDER BANNER */}
+          {!isProfileMetricsComplete ? (
+            <Card className="p-5 bg-gradient-to-r from-amber-500/10 via-pink-500/10 to-purple-500/10 border border-amber-200/90 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+                  <h3 className="text-sm font-bold text-slate-900">Complete Your Creator Profile</h3>
+                </div>
+                <p className="text-xs text-slate-600 max-w-xl">
+                  Your audience information is incomplete. Add your followers, subscribers, average views, and engagement metrics so brands can better discover and evaluate your profile.
+                </p>
+              </div>
+              <Link
+                to="/creator/profile"
+                className="px-4 py-2.5 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1.5 transition-all"
+              >
+                Complete Profile <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </Card>
+          ) : (
+            <Card className="p-4 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl flex items-center justify-between text-xs shadow-xs">
+              <div className="flex items-center gap-2.5 text-emerald-900 font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Creator Profile Complete — Your audience information is ready for brand discovery.</span>
+              </div>
+              <Link to="/creator/profile" className="text-emerald-700 hover:underline font-semibold text-[11px]">
+                View Profile
+              </Link>
+            </Card>
+          )}
+
+          {/* Creator Analytics & Performance Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card hoverable className="p-5 border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Total Earnings</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-slate-900 mt-2">
+                {formatCurrency(analytics?.totalReleasedEarnings ?? stats.totalEarnings ?? 0)}
+              </p>
+              <span className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" /> Escrowed: {formatCurrency(analytics?.totalEscrowedAmount ?? 0)}
+              </span>
+            </Card>
+
+            <Card className="p-5 border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Completed Collabs</span>
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-slate-900 mt-2">
+                {analytics?.completedCollaborations ?? 0}
+              </p>
+              <span className="text-[10px] text-purple-600 font-bold mt-1 block">
+                Completion Rate: {analytics?.collaborationCompletionRate ?? 0}%
+              </span>
+            </Card>
+
+            <Card className="p-5 border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Brands Worked With</span>
+                <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-slate-900 mt-2">
+                {analytics?.totalBrandsWorkedWith ?? 0}
+              </p>
+              <span className="text-[10px] text-pink-600 font-bold mt-1 block">
+                Active: {analytics?.activeCollaborations ?? stats.activeCampaigns ?? 0}
+              </span>
+            </Card>
+
+            <Card className="p-5 border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">Reputation Rating</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Star className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-slate-900 mt-2">
+                {analytics?.averageRating ?? 0} ⭐
+              </p>
+              <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                Total Reviews: {analytics?.totalReviews ?? 0}
+              </span>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <Card className="lg:col-span-2 p-5 border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Invitations & Offers</h2>
+                  <p className="text-xs text-slate-500 mt-1">Direct briefs received from top brands.</p>
+                </div>
+                <Mail className="w-5 h-5 text-pink-500"/>
+              </div>
+
+              <div className="space-y-3 mt-4">
+                {(!dashboardData?.recentRequests || dashboardData.recentRequests.length === 0) ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No pending invitations currently.</p>
+                ) : (
+                  dashboardData.recentRequests.map((req: any) => (
+                    <div key={req._id || req.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-900 block">{req.brandName}</span>
+                        <span className="text-slate-500 text-[11px]">{req.campaignTitle} — {formatCurrency(req.proposedPrice || 0)}</span>
+                      </div>
+                      {req.status === 'pending' && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleResponse(req._id || req.id, 'accepted')}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleResponse(req._id || req.id, 'rejected')}
+                            className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px] rounded-lg"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            <Card className="p-5 border-slate-200/80 space-y-3">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Creator Summary</h3>
+              <div className="space-y-2 text-xs text-slate-600">
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span>Total Collaborations:</span>
+                  <span className="font-bold text-slate-900">{analytics?.totalCollaborations ?? 0}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span>Open Negotiations:</span>
+                  <span className="font-bold text-slate-900">{stats.openNegotiations ?? 0}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span>Verified Rating:</span>
+                  <span className="font-bold text-slate-900">{analytics?.averageRating ?? 0} ⭐</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
