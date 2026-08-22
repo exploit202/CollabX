@@ -415,3 +415,18 @@ export const getBrandCollaborationActivity = (id: string) =>
 
 export const getCreatorCollaborationActivity = (id: string) =>
   request<{ success: boolean; collaborationId: string; activities: any[] }>(`/api/creator/collaborations/${id}/activity`);
+
+export const loginAdmin = (data:any) => request<any>('/api/auth/login',{method:'POST',body:JSON.stringify({...data,role:'admin'})});
+export const getCurrentUser = () => request<any>('/api/auth/me');
+export const reportBrand = (data: { reportedAgainst: string; reason: string; description?: string }) =>
+  request<any>('/api/creator/reports', { method: 'POST', body: JSON.stringify(data) });
+
+export const reportCreator = (data: { reportedAgainst: string; reason: string; description?: string }) =>
+  request<any>('/api/brand/reports', { method: 'POST', body: JSON.stringify(data) });
+
+export const getAdminDashboard = () => request<any>('/api/admin/dashboard');
+export const getAdminUsers = (p?:any) => {const q=new URLSearchParams();if(p?.role)q.set('role',p.role);if(p?.search)q.set('search',p.search);return request<any>(`/api/admin/users${q.toString()?`?${q}`:''}`)};
+export const updateAdminUserStatus=(id:string,isActive:boolean)=>request<any>(`/api/admin/users/${id}/status`,{method:'PATCH',body:JSON.stringify({isActive})});
+export const updateAdminUserVerification=(id:string,isVerified:boolean)=>request<any>(`/api/admin/users/${id}/verification`,{method:'PATCH',body:JSON.stringify({isVerified})});
+export const getAdminCampaigns=()=>request<any>('/api/admin/campaigns');export const moderateAdminCampaign=(id:string,action:string,note='')=>request<any>(`/api/admin/campaigns/${id}/moderation`,{method:'PATCH',body:JSON.stringify({action,note})});
+export const getAdminCollaborations=()=>request<any>('/api/admin/collaborations');export const getAdminReports=()=>request<any>('/api/admin/reports');export const updateAdminReportStatus=(id:string,status:string)=>request<any>(`/api/admin/reports/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});export const getAdminSettings=()=>request<any>('/api/admin/settings');export const updateAdminSettings=(data:any)=>request<any>('/api/admin/settings',{method:'PATCH',body:JSON.stringify(data)});

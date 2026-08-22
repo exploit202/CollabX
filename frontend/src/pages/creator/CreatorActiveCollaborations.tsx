@@ -4,9 +4,10 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
-import { Upload, ExternalLink, Send, Loader2, AlertCircle, RotateCcw, Star } from 'lucide-react';
+import { Upload, ExternalLink, Send, Loader2, AlertCircle, RotateCcw, Star, Flag } from 'lucide-react';
 import { CollaborationActivity } from '../../components/CollaborationActivity';
-import { getCreatorCollaborations, submitDeliverables } from '../../lib/api';
+import { getCreatorCollaborations, submitDeliverables, reportBrand } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 
 export const CreatorActiveCollaborations: React.FC = () => {
   const { formatCurrency } = useApp();
@@ -18,6 +19,7 @@ export const CreatorActiveCollaborations: React.FC = () => {
   const [submissionUrl, setSubmissionUrl] = useState('');
   const [submissionNotes, setSubmissionNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const [selectedCollabForReview, setSelectedCollabForReview] = useState<{
     creatorId: string;
@@ -192,6 +194,16 @@ export const CreatorActiveCollaborations: React.FC = () => {
                     </span>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setReportTarget({
+                          id: String(collab.brandId?._id || collab.brandId),
+                          name: brandName
+                        })}
+                        disabled={!collab.brandId?._id && !collab.brandId}
+                        className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold text-xs rounded-xl flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Flag className="w-3.5 h-3.5" /> Report Brand
+                      </button>
                       {!['brand_approved', 'completed'].includes(status) && (
                         <button
                           onClick={() => setSelectedCollabId(collabId)}
@@ -308,6 +320,16 @@ export const CreatorActiveCollaborations: React.FC = () => {
           }}
         />
       )}
+      <ReportUserModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        targetName={reportTarget?.name || 'Brand'}
+        targetRole="brand"
+        onSubmit={async (data) => {
+          if (!reportTarget) return;
+          await reportBrand({ reportedAgainst: reportTarget.id, ...data });
+        }}
+      />
     </div>
   );
 };

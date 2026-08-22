@@ -4,7 +4,7 @@ import { useAuth, UserRole } from '../../context/AuthContext';
 import { ArrowRight, Mail, Loader2, AlertCircle } from 'lucide-react';
 import { AuthShell } from '../../components/common/AuthShell';
 import { TextField, PasswordField } from '../../components/common/FormField';
-import { loginBrand, loginCreator } from '../../lib/api';
+import { loginBrand, loginCreator, loginAdmin } from '../../lib/api';
 
 interface FormErrors {
   email?: string;
@@ -79,7 +79,7 @@ export const LoginPage: React.FC = () => {
           navigate('/creator/dashboard');
         }
       } else {
-        const res = await loginBrand({ email, password });
+        const res = await loginAdmin({ email, password });
         if (res.success && res.data?.token) {
           login(res.data.token, res.data.user, 'admin');
           navigate('/admin/dashboard');

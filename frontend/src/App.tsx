@@ -123,6 +123,8 @@ export default function App() {
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><ManageUsers /></ProtectedRoute>} />
+                <Route path="/admin/brands" element={<ProtectedRoute allowedRoles={['admin']}><ManageUsers /></ProtectedRoute>} />
+                <Route path="/admin/creators" element={<ProtectedRoute allowedRoles={['admin']}><ManageUsers /></ProtectedRoute>} />
                 <Route path="/admin/campaigns" element={<ProtectedRoute allowedRoles={['admin']}><ManageCampaigns /></ProtectedRoute>} />
                 <Route path="/admin/collaborations" element={<ProtectedRoute allowedRoles={['admin']}><ManageCollaborations /></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />

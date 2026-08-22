@@ -14,6 +14,7 @@ const analyticsRouter = require('./routes/analytics.routes');
 const reviewRouter = require('../creator/routes/review.routes');
 const brandDiscoveryRouter = require('./routes/brandDiscovery.routes');
 const brandSettingsRouter = require('./routes/brandSettings.routes');
+const reportRouter = require('../reports/report.routes').createRoleRouter('brand');
 
 router.use('/dashboard', brandDashboardRouter);
 router.use('/profile', brandProfileRouter);
@@ -28,5 +29,6 @@ router.use('/payments', paymentRouter);
 router.use('/analytics', analyticsRouter);
 router.use('/reviews', reviewRouter);
 router.use('/settings', brandSettingsRouter);
+router.use('/reports', reportRouter);
 
 module.exports = router;

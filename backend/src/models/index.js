@@ -14,6 +14,9 @@ const Review = require('./review.model');
 const Pricing = require('./pricing.model');
 const Payment = require('./payment.model');
 const CreatorPayoutAccount = require('./creatorPayoutAccount.model');
+const AdminSettings = require('./adminSettings.model');
+const AdminReport = require('./adminReport.model');
+const AdminCampaignAction = require('./adminCampaignAction.model');
 
 module.exports = {
   User,
@@ -33,5 +36,8 @@ module.exports = {
   Review,
   Pricing,
   Payment,
-  CreatorPayoutAccount
+  CreatorPayoutAccount,
+  AdminSettings,
+  AdminReport,
+  AdminCampaignAction
 };

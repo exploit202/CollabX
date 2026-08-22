@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getToken, setToken, getBrandProfile, getCreatorProfile } from '../lib/api';
+import { getToken, setToken, getBrandProfile, getCreatorProfile, getCurrentUser } from '../lib/api';
 
 export type UserRole = 'brand' | 'creator' | 'admin' | 'guest';
 
@@ -102,6 +102,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      try {
+        const currentRes = await getCurrentUser();
+        if (currentRes.success && currentRes.data?.user?.role === 'admin') { const u=currentRes.data.user; setUser({...u,id:u.id||u._id,name:u.fullName||'Admin'}); setRole('admin'); setIsAuthenticated(true); localStorage.setItem('collabx_role','admin'); localStorage.setItem('collabx_user',JSON.stringify(u)); setIsLoading(false); return; }
+      } catch (e) {}
       try {
         const brandRes = await getBrandProfile();
         if (brandRes.success && brandRes.data?.profile) {

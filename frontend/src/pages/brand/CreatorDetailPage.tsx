@@ -6,7 +6,8 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { SendInvitationModal } from '../../components/modals/SendInvitationModal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
-import { getCreatorById } from '../../lib/api';
+import { getCreatorById, reportCreator } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 import {
   Star,
   CheckCircle2,
@@ -24,7 +25,8 @@ import {
   Users,
   Clock,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Flag
 } from 'lucide-react';
 
 export const CreatorDetailPage: React.FC = () => {
@@ -39,6 +41,7 @@ export const CreatorDetailPage: React.FC = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'pricing' | 'portfolio' | 'reviews'>('overview');
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -167,6 +170,14 @@ export const CreatorDetailPage: React.FC = () => {
                 >
                   <Send className="w-4 h-4" />
                   Send Collaboration Request
+                </button>
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2"
+                  title="Report Creator"
+                >
+                  <Flag className="w-4 h-4" />
+                  Report
                 </button>
               </>
             )}
@@ -369,6 +380,17 @@ export const CreatorDetailPage: React.FC = () => {
         onClose={() => setShowReviewModal(false)}
         creatorId={creator.id || creator._id}
         creatorName={creator.name}
+      />
+      <ReportUserModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetName={creator?.name || 'Creator'}
+        targetRole="creator"
+        onSubmit={async (data) => {
+          const creatorId = String(creator?.id || creator?._id || creator?.userId || '');
+          if (!creatorId) return;
+          await reportCreator({ reportedAgainst: creatorId, ...data });
+        }}
       />
     </div>
   );
