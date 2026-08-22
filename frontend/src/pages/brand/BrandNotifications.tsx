@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Mail, MessageSquare, Briefcase, Loader2, CheckCircle2, DollarSign, Star, CheckCheck } from 'lucide-react';
 
+import { formatNotificationDateTime } from '../../utils/dateTime';
+
 export const BrandNotifications: React.FC = () => {
   const { notifications, markNotificationRead, markAllNotificationsRead, refreshAppData } = useApp();
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,7 @@ export const BrandNotifications: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-bold text-slate-900">{n.title || n.message}</h4>
                       <span className="text-[10px] text-slate-400 font-medium">
-                        {new Date(n.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatNotificationDateTime(n.createdAt || n.timestamp)}
                       </span>
                     </div>
                     {isUnread && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#EC4899] mr-1" aria-label="Unread" />}

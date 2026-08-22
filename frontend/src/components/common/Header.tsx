@@ -5,6 +5,8 @@ import { Bell, LogOut, ChevronDown, Menu, Layers } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from './Avatar';
 
+import { formatNotificationDateTime } from '../../utils/dateTime';
+
 interface HeaderProps {
   onOpenMobileSidebar?: () => void;
 }
@@ -96,9 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
                   notifications.map((n: any) => {
                     const nid = n._id || n.id;
                     const isUnread = !n.read && !n.isRead;
-                    const timeStr = n.createdAt
-                      ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : (n.timestamp || 'Just now');
+                    const timeStr = formatNotificationDateTime(n.createdAt || n.timestamp);
 
                     return (
                       <div

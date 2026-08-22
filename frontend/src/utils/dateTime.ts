@@ -74,3 +74,43 @@ export const formatDateTime = (
     return date.toLocaleString();
   }
 };
+
+/**
+ * Formats a notification date & time with 'Today at HH:MM AM/PM' or 'DD MMM YYYY, HH:MM AM/PM'.
+ */
+export const formatNotificationDateTime = (
+  dateInput?: string | Date | number | null,
+  timezone = 'Asia/Kolkata'
+): string => {
+  if (!dateInput) return 'Just now';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return String(dateInput);
+
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const validTz = getCanonicalTimezone(timezone);
+
+  try {
+    const timeFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: validTz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    const timeStr = timeFormatter.format(date);
+
+    if (isToday) {
+      return `Today at ${timeStr}`;
+    }
+
+    const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: validTz,
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    return `${dateFormatter.format(date)}, ${timeStr}`;
+  } catch (_) {
+    return date.toLocaleString();
+  }
+};

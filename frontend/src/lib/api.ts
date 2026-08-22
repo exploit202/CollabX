@@ -440,6 +440,9 @@ export const updateAdminUserStatus=(id:string,isActive:boolean)=>request<any>(`/
 export const updateAdminUserVerification=(id:string,isVerified:boolean)=>request<any>(`/api/admin/users/${id}/verification`,{method:'PATCH',body:JSON.stringify({isVerified})});
 export const getAdminCampaigns=()=>request<any>('/api/admin/campaigns');export const moderateAdminCampaign=(id:string,action:string,note='')=>request<any>(`/api/admin/campaigns/${id}/moderation`,{method:'PATCH',body:JSON.stringify({action,note})});
 export const getAdminCollaborations=()=>request<any>('/api/admin/collaborations');export const getAdminReports=()=>request<any>('/api/admin/reports');export const updateAdminReportStatus=(id:string,status:string)=>request<any>(`/api/admin/reports/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});export const getAdminSettings=()=>request<any>('/api/admin/settings');export const updateAdminSettings=(data:any)=>request<any>('/api/admin/settings',{method:'PATCH',body:JSON.stringify(data)});
+export const getAdminNotifications = () => request<{ success: boolean; data: any[] }>('/api/admin/notifications');
+export const markAdminNotificationRead = (id: string) => request<{ success: boolean; data: any }>(`/api/admin/notifications/${id}/read`, { method: 'PATCH' });
+export const markAllAdminNotificationsRead = () => request<{ success: boolean }>('/api/admin/notifications/read-all', { method: 'PATCH' });
 
 export const uploadCreatorProfileImage = (file: File) => {
   const formData = new FormData();

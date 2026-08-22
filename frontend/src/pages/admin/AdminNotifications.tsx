@@ -3,11 +3,10 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { EmptyState } from '../../components/common/EmptyState';
 import { SkeletonLoader } from '../../components/common/SkeletonLoader';
-import { Mail, MessageSquare, Briefcase, CheckCheck, Bell } from 'lucide-react';
-
+import { ShieldAlert, Bell, CheckCheck, UserX, FileCheck, Flag } from 'lucide-react';
 import { formatNotificationDateTime } from '../../utils/dateTime';
 
-export const CreatorNotifications: React.FC = () => {
+export const AdminNotifications: React.FC = () => {
   const { notifications, markNotificationRead, markAllNotificationsRead, refreshAppData } = useApp();
   const [loading, setLoading] = useState(true);
 
@@ -17,12 +16,19 @@ export const CreatorNotifications: React.FC = () => {
 
   const hasUnread = notifications.some((n: any) => !n.isRead && !n.read);
 
+  const getIcon = (type: string) => {
+    if (type.includes('report') || type.includes('flag')) return <Flag className="w-4.5 h-4.5" />;
+    if (type.includes('user') || type.includes('verification')) return <UserX className="w-4.5 h-4.5" />;
+    if (type.includes('campaign')) return <FileCheck className="w-4.5 h-4.5" />;
+    return <ShieldAlert className="w-4.5 h-4.5" />;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Notification Center</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Real-time updates for brand invitations, counter offers, and deliverable approvals</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Admin Command Notification Center</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Real-time platform audit alerts, user reports, campaign moderation notices, and system logs</p>
         </div>
         {hasUnread && (
           <button
@@ -41,12 +47,12 @@ export const CreatorNotifications: React.FC = () => {
           {notifications.length === 0 ? (
             <EmptyState
               icon={Bell}
-              title="All Caught Up!"
-              description="You have no notifications right now. New campaign invitations and negotiation updates will appear here."
+              title="No System Alerts"
+              description="Platform operations are running smoothly. System security alerts and user moderation flags will appear here."
               variant="card"
             />
           ) : (
-            notifications.map((n) => {
+            notifications.map((n: any) => {
               const isUnread = !n.isRead && !n.read;
               return (
                 <Card
@@ -58,16 +64,12 @@ export const CreatorNotifications: React.FC = () => {
                       : 'bg-white/90 hover:bg-slate-50/80'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${
-                    isUnread ? 'bg-gradient-to-tr from-purple-600 to-indigo-500 text-white' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {n.type === 'invitation' ? (
-                      <Mail className="w-4.5 h-4.5" />
-                    ) : n.type === 'negotiation' ? (
-                      <MessageSquare className="w-4.5 h-4.5" />
-                    ) : (
-                      <Briefcase className="w-4.5 h-4.5" />
-                    )}
+                  <div
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${
+                      isUnread ? 'bg-gradient-to-tr from-purple-600 to-indigo-500 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {getIcon(n.type || '')}
                   </div>
 
                   <div className="flex-1 min-w-0 pt-0.5">

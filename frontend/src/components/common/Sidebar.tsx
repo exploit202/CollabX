@@ -81,6 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
     { name: 'Campaigns', path: '/admin/campaigns', icon: Megaphone },
     { name: 'Collaborations', path: '/admin/collaborations', icon: Briefcase },
     { name: 'Reports', path: '/admin/reports', icon: ShieldAlert },
+    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: unreadNotifCount },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 

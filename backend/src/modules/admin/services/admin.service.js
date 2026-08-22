@@ -9,4 +9,53 @@ const getReports=()=>AdminReport.find({}).populate('reportedBy','fullName email 
 const createReport=async(by,d)=>{const target=await User.findOne({_id:d.reportedAgainst,role:{$in:['brand','creator']}});if(!target||String(target._id)===String(by))throw Object.assign(new Error('Invalid report target.'),{statusCode:400});return AdminReport.create({reportedBy:by,reportedAgainst:target._id,reason:d.reason,description:d.description||''});};
 const updateReport=async(id,adminId,status)=>{if(!['pending','mediation','resolved','dismissed'].includes(status))throw Object.assign(new Error('Invalid report status.'),{statusCode:400});const u={status};if(['resolved','dismissed'].includes(status)){u.resolvedBy=adminId;u.resolvedAt=new Date();}else{u.resolvedBy=null;u.resolvedAt=null;}const r=await AdminReport.findByIdAndUpdate(id,u,{new:true}).populate('reportedBy','fullName email role').populate('reportedAgainst','fullName email role');if(!r)throw Object.assign(new Error('Report not found.'),{statusCode:404});return r;};
 const getSettings=async()=>{let s=await AdminSettings.findOne({key:'platform'});if(!s)s=await AdminSettings.create({key:'platform'});return s;};const updateSettings=(d)=>AdminSettings.findOneAndUpdate({key:'platform'},{$set:{...(d.brandServiceFee!==undefined&&{brandServiceFee:d.brandServiceFee}),...(d.creatorCommissionFee!==undefined&&{creatorCommissionFee:d.creatorCommissionFee}),...(d.payoutHoldDays!==undefined&&{payoutHoldDays:d.payoutHoldDays})}},{new:true,upsert:true,setDefaultsOnInsert:true,runValidators:true});
-module.exports={getDashboard,getUsers,updateUser, getCampaigns,moderateCampaign,getCollaborations,getReports,createReport,updateReport,getSettings,updateSettings};
+const Notification = require('../../../models/notification.model');
+
+const getNotifications = async (adminId) => {
+  return Notification.find({
+    $or: [{ userId: adminId }, { type: 'system' }]
+  })
+    .populate('senderId', 'fullName email profileImage')
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+};
+
+const markNotificationRead = async (id, adminId) => {
+  const notif = await Notification.findOneAndUpdate(
+    { _id: id, $or: [{ userId: adminId }, { type: 'system' }] },
+    { isRead: true, read: true },
+    { new: true }
+  );
+  if (!notif) {
+    const error = new Error('Notification not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return notif;
+};
+
+const markAllNotificationsRead = async (adminId) => {
+  await Notification.updateMany(
+    { $or: [{ userId: adminId }, { type: 'system' }], isRead: false },
+    { isRead: true, read: true }
+  );
+  return { success: true };
+};
+
+module.exports = {
+  getDashboard,
+  getUsers,
+  updateUser,
+  getCampaigns,
+  moderateCampaign,
+  getCollaborations,
+  getReports,
+  createReport,
+  updateReport,
+  getSettings,
+  updateSettings,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead
+};

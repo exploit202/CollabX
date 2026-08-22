@@ -51,6 +51,7 @@ import { ManageUsers } from './pages/admin/ManageUsers';
 import { ManageCampaigns } from './pages/admin/ManageCampaigns';
 import { ManageCollaborations } from './pages/admin/ManageCollaborations';
 import { AdminReports } from './pages/admin/AdminReports';
+import { AdminNotifications } from './pages/admin/AdminNotifications';
 import { AdminSettings } from './pages/admin/AdminSettings';
 
 const ScrollToHashElement: React.FC = () => {
@@ -128,6 +129,7 @@ export default function App() {
                 <Route path="/admin/campaigns" element={<ProtectedRoute allowedRoles={['admin']}><ManageCampaigns /></ProtectedRoute>} />
                 <Route path="/admin/collaborations" element={<ProtectedRoute allowedRoles={['admin']}><ManageCollaborations /></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
+                <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminNotifications /></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
               </Route>
 

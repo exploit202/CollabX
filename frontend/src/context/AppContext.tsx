@@ -35,7 +35,10 @@ import {
   getBrandNegotiations,
   getSavedCreators,
   saveCreator,
-  removeSavedCreator
+  removeSavedCreator,
+  getAdminNotifications,
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead
 } from '../lib/api';
 
 export interface Toast {
@@ -180,6 +183,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (err) {
         console.error('Error fetching brand data for AppContext:', err);
+      }
+    } else if (role === 'admin') {
+      try {
+        const notifRes = await getAdminNotifications().catch(() => null);
+        if (notifRes?.success && Array.isArray(notifRes.data)) {
+          setNotifications(notifRes.data);
+        }
+      } catch (err) {
+        console.error('Error fetching admin notifications for AppContext:', err);
       }
     }
   }, [role, token, isGuest]);
