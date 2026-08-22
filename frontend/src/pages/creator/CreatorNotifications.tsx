@@ -1,37 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
-import { Mail, MessageSquare, Briefcase, Loader2 } from 'lucide-react';
-import { getCreatorNotifications, markCreatorNotificationRead } from '../../lib/api';
+import { Mail, MessageSquare, Briefcase, Loader2, CheckCheck } from 'lucide-react';
 
 export const CreatorNotifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const { notifications, markNotificationRead, markAllNotificationsRead, refreshAppData } = useApp();
   const [loading, setLoading] = useState(true);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await getCreatorNotifications();
-      if (res.success) {
-        setNotifications(res.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching creator notifications:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    refreshAppData().finally(() => setLoading(false));
+  }, [refreshAppData]);
 
-  const handleRead = async (id: string) => {
-    try {
-      await markCreatorNotificationRead(id);
-      fetchNotifications();
-    } catch (err) {
-      console.error('Failed to mark notification read:', err);
-    }
-  };
+  const hasUnread = notifications.some((n: any) => !n.isRead && !n.read);
 
   return (
     <div className="space-y-6">
@@ -40,6 +20,14 @@ export const CreatorNotifications: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Notification Center</h1>
           <p className="text-xs text-slate-500">Alerts for brand invitations, counter offers, and deliverable approvals</p>
         </div>
+        {hasUnread && (
+          <button
+            onClick={() => markAllNotificationsRead()}
+            className="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all border border-purple-100 shrink-0 self-start sm:self-auto"
+          >
+            <CheckCheck className="w-4 h-4 text-purple-600" /> Mark all as read
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -56,7 +44,7 @@ export const CreatorNotifications: React.FC = () => {
             notifications.map((n) => (
               <Card
                 key={n._id || n.id}
-                onClick={() => handleRead(n._id || n.id)}
+                onClick={() => markNotificationRead(n._id || n.id)}
                 className={`p-4 border-slate-200/90 flex items-start gap-3 cursor-pointer transition-all ${
                   !n.isRead && !n.read ? 'bg-purple-50/60 border-purple-200 shadow-sm' : 'bg-white opacity-80'
                 }`}

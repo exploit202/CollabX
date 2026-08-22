@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 import {
   CreatorProfile,
   BrandProfile,
@@ -16,15 +17,23 @@ import {
   mockCreators,
   mockBrands,
   mockCampaigns,
-  mockInvitations,
-  mockNegotiations,
-  mockCollaborations,
-  mockNotifications,
   mockReports,
 } from '../data/mockData';
 import { formatCurrency as utilsFormatCurrency, convertCurrency as utilsConvertCurrency } from '../utils/currency';
 import { formatDate as utilsFormatDate, formatDateTime as utilsFormatDateTime } from '../utils/dateTime';
-import { getBrandSettings } from '../lib/api';
+import {
+  getBrandSettings,
+  getCreatorNotifications,
+  markCreatorNotificationRead,
+  markAllCreatorNotificationsRead,
+  getBrandNotifications,
+  markBrandNotificationRead,
+  markAllBrandNotificationsRead,
+  getCreatorRequests,
+  getCreatorNegotiations,
+  getBrandInvitations,
+  getBrandNegotiations
+} from '../lib/api';
 
 export interface Toast {
   id: string;
@@ -59,6 +68,9 @@ interface AppContextType {
   formatDate: (date: string | Date | number | null) => string;
   formatDateTime: (date: string | Date | number | null) => string;
 
+  // Synchronization
+  refreshAppData: () => Promise<void>;
+
   // Actions
   addToast: (type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => void;
   removeToast: (id: string) => void;
@@ -88,14 +100,15 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role, token, isGuest } = useAuth();
   const [creators, setCreators] = useState<CreatorProfile[]>(mockCreators);
   const [brands, setBrands] = useState<BrandProfile[]>(mockBrands);
   const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
-  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>(['creator-1', 'creator-3']);
-  const [invitations, setInvitations] = useState<Invitation[]>(mockInvitations);
-  const [negotiations, setNegotiations] = useState<Negotiation[]>(mockNegotiations);
-  const [collaborations, setCollaborations] = useState<Collaboration[]>(mockCollaborations);
-  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
+  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [reports, setReports] = useState<PlatformReport[]>(mockReports);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
@@ -103,8 +116,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currency: 'INR'
   });
 
+  const refreshAppData = useCallback(async () => {
+    if (!token || isGuest) {
+      setNotifications([]);
+      setInvitations([]);
+      setNegotiations([]);
+      return;
+    }
+
+    if (role === 'creator') {
+      try {
+        const [notifRes, reqRes, negRes] = await Promise.all([
+          getCreatorNotifications().catch(() => null),
+          getCreatorRequests().catch(() => null),
+          getCreatorNegotiations().catch(() => null)
+        ]);
+
+        if (notifRes?.success && Array.isArray(notifRes.data)) {
+          setNotifications(notifRes.data);
+        }
+        if (reqRes?.success && Array.isArray(reqRes.data)) {
+          setInvitations(reqRes.data);
+        }
+        if (negRes?.success && Array.isArray(negRes.data)) {
+          setNegotiations(negRes.data);
+        }
+      } catch (err) {
+        console.error('Error fetching creator data for AppContext:', err);
+      }
+    } else if (role === 'brand') {
+      try {
+        const [notifRes, invRes, negRes] = await Promise.all([
+          getBrandNotifications().catch(() => null),
+          getBrandInvitations().catch(() => null),
+          getBrandNegotiations().catch(() => null)
+        ]);
+
+        if (notifRes?.success && Array.isArray(notifRes.data)) {
+          setNotifications(notifRes.data);
+        }
+        if (invRes?.success && Array.isArray(invRes.data)) {
+          setInvitations(invRes.data);
+        }
+        if (negRes?.success && Array.isArray(negRes.data)) {
+          setNegotiations(negRes.data);
+        }
+      } catch (err) {
+        console.error('Error fetching brand data for AppContext:', err);
+      }
+    }
+  }, [role, token, isGuest]);
+
+  useEffect(() => {
+    refreshAppData();
+  }, [refreshAppData]);
+
   // Attempt to restore user preferences from backend on initial mount
   useEffect(() => {
+    if (!token || isGuest) return;
     getBrandSettings()
       .then((res) => {
         if (res?.success && res.data?.preferences) {
@@ -120,7 +189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch((_) => {
         // Unauthenticated or default fallback
       });
-  }, []);
+  }, [token, isGuest]);
 
   const formatCurrency = (amount: number | string, fromCurrency = 'INR') => {
     return utilsFormatCurrency(amount, userPreferences.currency || 'INR', fromCurrency);
@@ -434,15 +503,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Notifications
-  const markNotificationRead = (id: string) => {
+  const markNotificationRead = async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n: any) =>
+        (n._id || n.id) === id ? { ...n, read: true, isRead: true } : n
+      )
     );
+    try {
+      if (role === 'creator') {
+        await markCreatorNotificationRead(id);
+      } else if (role === 'brand') {
+        await markBrandNotificationRead(id);
+      }
+    } catch (err) {
+      console.error('Failed to mark notification read on backend:', err);
+    }
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    addToast('info', 'All notifications marked as read');
+  const markAllNotificationsRead = async () => {
+    setNotifications((prev) =>
+      prev.map((n: any) => ({ ...n, read: true, isRead: true }))
+    );
+    try {
+      if (role === 'creator') {
+        await markAllCreatorNotificationsRead();
+      } else if (role === 'brand') {
+        await markAllBrandNotificationsRead();
+      }
+      addToast('info', 'All notifications marked as read');
+    } catch (err) {
+      console.error('Failed to mark all notifications read on backend:', err);
+    }
   };
 
   return (
@@ -464,6 +555,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         convertCurrency,
         formatDate,
         formatDateTime,
+        refreshAppData,
         addToast,
         removeToast,
         toggleSaveCreator,

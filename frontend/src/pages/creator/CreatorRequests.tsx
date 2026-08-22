@@ -8,7 +8,7 @@ import { Check, MessageSquare, Loader2 } from 'lucide-react';
 import { getCreatorRequests, respondToInvitation } from '../../lib/api';
 
 export const CreatorRequests: React.FC = () => {
-  const { formatCurrency } = useApp();
+  const { formatCurrency, refreshAppData } = useApp();
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -33,6 +33,7 @@ export const CreatorRequests: React.FC = () => {
   const handleRespond = async (id: string, status: 'accepted' | 'rejected' | 'negotiating') => {
     try {
       await respondToInvitation(id, status);
+      await refreshAppData();
       if (status === 'negotiating') {
         navigate(`/creator/negotiations?invitationId=${id}`);
       } else {

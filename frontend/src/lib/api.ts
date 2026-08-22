@@ -227,6 +227,11 @@ export const markBrandNotificationRead = (id: string) =>
     method: 'PATCH'
   });
 
+export const markAllBrandNotificationsRead = () =>
+  request<{ success: boolean }>('/api/brand/notifications/read-all', {
+    method: 'PATCH'
+  });
+
 export const getBrandSettings = () =>
   request<{
     success: boolean;
@@ -338,6 +343,11 @@ export const getCreatorNotifications = () =>
 
 export const markCreatorNotificationRead = (id: string) =>
   request<{ success: boolean; data: any }>(`/api/creator/notifications/${id}/read`, {
+    method: 'PATCH'
+  });
+
+export const markAllCreatorNotificationsRead = () =>
+  request<{ success: boolean }>('/api/creator/notifications/read-all', {
     method: 'PATCH'
   });
 

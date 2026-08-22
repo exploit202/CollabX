@@ -6,6 +6,7 @@ const controller = require('../controllers/creatorNotification.controller');
 router.use(verifyJWT);
 
 router.get('/', controller.getNotifications);
+router.patch('/read-all', controller.markAllAsRead);
 router.patch('/:id/read', controller.markAsRead);
 
 module.exports = router;

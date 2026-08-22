@@ -1,37 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
-import { Mail, MessageSquare, Briefcase, Loader2, CheckCircle2, DollarSign, Star } from 'lucide-react';
-import { getBrandNotifications, markBrandNotificationRead } from '../../lib/api';
+import { Mail, MessageSquare, Briefcase, Loader2, CheckCircle2, DollarSign, Star, CheckCheck } from 'lucide-react';
 
 export const BrandNotifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const { notifications, markNotificationRead, markAllNotificationsRead, refreshAppData } = useApp();
   const [loading, setLoading] = useState(true);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await getBrandNotifications();
-      if (res.success) {
-        setNotifications(res.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching brand notifications:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    refreshAppData().finally(() => setLoading(false));
+  }, [refreshAppData]);
 
-  const handleRead = async (id: string) => {
-    try {
-      await markBrandNotificationRead(id);
-      fetchNotifications();
-    } catch (err) {
-      console.error('Failed to mark notification read:', err);
-    }
-  };
+  const hasUnread = notifications.some((n: any) => !n.isRead && !n.read);
 
   const getIcon = (type: string) => {
     if (type.includes('invitation')) return <Mail className="w-4 h-4" />;
@@ -49,6 +29,14 @@ export const BrandNotifications: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Notification Center</h1>
           <p className="text-xs text-slate-500">Alerts for campaign updates, creator counter offers, deliverable submissions, and payouts</p>
         </div>
+        {hasUnread && (
+          <button
+            onClick={() => markAllNotificationsRead()}
+            className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-[#EC4899] font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all border border-pink-100 shrink-0 self-start sm:self-auto"
+          >
+            <CheckCheck className="w-4 h-4 text-[#EC4899]" /> Mark all as read
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -67,7 +55,7 @@ export const BrandNotifications: React.FC = () => {
               return (
                 <Card
                   key={n._id || n.id}
-                  onClick={() => handleRead(n._id || n.id)}
+                  onClick={() => markNotificationRead(n._id || n.id)}
                   className={`p-4 border-slate-200/90 flex items-start gap-3 cursor-pointer transition-all ${
                     isUnread ? 'bg-pink-50/60 border-pink-200 shadow-sm' : 'bg-white opacity-80'
                   }`}

@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n: any) => !n.read && !n.isRead).length;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,19 +114,30 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
                 {notifications.length === 0 ? (
                   <p className="text-xs text-slate-400 text-center py-4">No new notifications</p>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => markNotificationRead(n.id)}
-                      className={`py-2.5 px-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors ${
-                        !n.read ? 'bg-pink-50/40' : ''
-                      }`}
-                    >
-                      <p className="text-xs font-semibold text-slate-800">{n.title}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
-                      <span className="text-[9px] text-slate-400 mt-1 block">{n.timestamp}</span>
-                    </div>
-                  ))
+                  notifications.map((n: any) => {
+                    const nid = n._id || n.id;
+                    const isUnread = !n.read && !n.isRead;
+                    const timeStr = n.createdAt
+                      ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : (n.timestamp || 'Just now');
+
+                    return (
+                      <div
+                        key={nid}
+                        onClick={() => markNotificationRead(nid)}
+                        className={`py-2.5 px-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors ${
+                          isUnread ? 'bg-pink-50/40' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-slate-800">{n.title || n.message}</p>
+                          {isUnread && <span className="w-1.5 h-1.5 rounded-full bg-[#EC4899] shrink-0" aria-label="Unread" />}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                        <span className="text-[9px] text-slate-400 mt-1 block">{timeStr}</span>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 

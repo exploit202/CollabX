@@ -41,9 +41,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
   const { role, isGuest, user } = useAuth();
   const { notifications, invitations, negotiations } = useApp();
 
-  const unreadNotifCount = notifications.filter((n) => !n.read).length;
-  const pendingInvCount = invitations.filter((i) => i.status === 'pending').length;
-  const activeNegCount = negotiations.filter((n) => n.status === 'active').length;
+  const unreadNotifCount = notifications.filter((n: any) => !n.read && !n.isRead).length;
+  const pendingInvCount = invitations.filter((i: any) => i.status === 'pending').length;
+  const activeNegCount = negotiations.filter((n: any) => ['active', 'open', 'pending', 'in_progress'].includes(n.status)).length;
 
   const brandNav: NavItem[] = [
     { name: 'Dashboard', path: '/brand/dashboard', icon: LayoutDashboard },

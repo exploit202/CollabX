@@ -20,7 +20,7 @@ const badge = (s: string) => (s === 'agreed' ? 'emerald' : s === 'rejected' || s
 
 export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
   const { user } = useAuth();
-  const { formatCurrency, formatDateTime } = useApp();
+  const { formatCurrency, formatDateTime, refreshAppData } = useApp();
   const [searchParams] = useSearchParams();
   const targetIdParam = searchParams.get('id') || searchParams.get('invitationId');
 
@@ -151,6 +151,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
 
       setNotes('');
       fetchNegotiations();
+      refreshAppData();
     } catch (err) {
       console.error('Failed to send counter offer:', err);
     } finally {
@@ -172,6 +173,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
       }
 
       fetchNegotiations();
+      refreshAppData();
     } catch (err) {
       console.error('Failed to accept offer:', err);
     } finally {
