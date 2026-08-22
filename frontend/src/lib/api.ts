@@ -22,7 +22,7 @@ export const setToken = (token: string | null): void => {
 export const request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const token = getToken();
   const headers: Record<string, string> = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string> || {})
   };
 
@@ -430,3 +430,21 @@ export const updateAdminUserStatus=(id:string,isActive:boolean)=>request<any>(`/
 export const updateAdminUserVerification=(id:string,isVerified:boolean)=>request<any>(`/api/admin/users/${id}/verification`,{method:'PATCH',body:JSON.stringify({isVerified})});
 export const getAdminCampaigns=()=>request<any>('/api/admin/campaigns');export const moderateAdminCampaign=(id:string,action:string,note='')=>request<any>(`/api/admin/campaigns/${id}/moderation`,{method:'PATCH',body:JSON.stringify({action,note})});
 export const getAdminCollaborations=()=>request<any>('/api/admin/collaborations');export const getAdminReports=()=>request<any>('/api/admin/reports');export const updateAdminReportStatus=(id:string,status:string)=>request<any>(`/api/admin/reports/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});export const getAdminSettings=()=>request<any>('/api/admin/settings');export const updateAdminSettings=(data:any)=>request<any>('/api/admin/settings',{method:'PATCH',body:JSON.stringify(data)});
+
+export const uploadCreatorProfileImage = (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  return request<any>('/api/creator/profile/avatar', {
+    method: 'POST',
+    body: formData
+  });
+};
+
+export const uploadBrandProfileImage = (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  return request<any>('/api/brand/profile/avatar', {
+    method: 'POST',
+    body: formData
+  });
+};
