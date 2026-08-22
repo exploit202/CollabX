@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from './Avatar';
@@ -150,24 +151,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
               className={({ isActive }) =>
                 `relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 group ${
                   isActive
-                    ? 'bg-gradient-to-r from-pink-50/90 via-purple-50/50 to-white text-[#EC4899] shadow-xs border border-pink-100/80'
+                    ? 'text-[#EC4899] shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
+                  {isActive && (
+                    <motion.span
+                      layoutId="sidebarActiveBg"
+                      className="absolute inset-0 bg-gradient-to-r from-pink-50/90 via-purple-50/50 to-white border border-pink-100/80 rounded-xl shadow-2xs -z-10"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                   <div className="flex items-center gap-3 min-w-0">
                     <Icon className={`w-4 h-4 shrink-0 transition-all duration-200 ${isActive ? 'text-[#EC4899] scale-110' : 'text-slate-400 group-hover:text-slate-700 group-hover:scale-110'}`} />
                     <span className="truncate tracking-tight">{item.name}</span>
                   </div>
                   {item.badge && item.badge > 0 ? (
-                    <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-[#EC4899] to-[#8B5CF6] text-white shadow-xs animate-pulse-glow">
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-[#EC4899] to-[#8B5CF6] text-white shadow-xs">
                       {item.badge}
                     </span>
                   ) : null}
                   {isActive && (
-                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-[#EC4899] to-[#8B5CF6]" />
+                    <motion.span
+                      layoutId="sidebarActiveBar"
+                      className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gradient-to-b from-[#EC4899] to-[#8B5CF6]"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
                   )}
                 </>
               )}

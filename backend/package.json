@@ -27,6 +27,7 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "resend": "^6.19.0",
+    "seed": "^0.4.4",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "zod": "^4.4.3"
