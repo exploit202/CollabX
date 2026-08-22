@@ -7,9 +7,10 @@ async function saveCreator(creatorId, brandId) {
     return { success: false, message: 'Invalid ID format', status: 400 };
   }
 
-  const profile = await CreatorProfile.findOne({
-    $or: [{ _id: creatorId }, { userId: creatorId }]
-  }).populate('userId', 'fullName email profileImage isVerified');
+  let profile = await CreatorProfile.findById(creatorId).populate('userId', 'fullName email profileImage isVerified');
+  if (!profile) {
+    profile = await CreatorProfile.findOne({ userId: creatorId }).populate('userId', 'fullName email profileImage isVerified');
+  }
 
   if (!profile) {
     return { success: false, message: 'Creator profile not found', status: 404 };
@@ -30,11 +31,20 @@ async function removeSavedCreator(creatorId, brandId) {
   if (!mongoose.Types.ObjectId.isValid(creatorId) || !mongoose.Types.ObjectId.isValid(brandId)) {
     return false;
   }
-  const profile = await CreatorProfile.findOne({
-    $or: [{ _id: creatorId }, { userId: creatorId }]
+
+  let targetCreatorId = creatorId;
+  let profile = await CreatorProfile.findById(creatorId);
+  if (!profile) {
+    profile = await CreatorProfile.findOne({ userId: creatorId });
+  }
+  if (profile) {
+    targetCreatorId = profile._id;
+  }
+
+  const removed = await SavedCreator.findOneAndDelete({
+    brandId,
+    $or: [{ creatorId: creatorId }, { creatorId: targetCreatorId }]
   });
-  const targetId = profile ? profile._id : creatorId;
-  const removed = await SavedCreator.findOneAndDelete({ brandId, creatorId: targetId });
   return removed !== null;
 }
 

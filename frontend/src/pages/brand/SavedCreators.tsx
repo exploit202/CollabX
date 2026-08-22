@@ -6,10 +6,12 @@ import { Avatar } from '../../components/common/Avatar';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Star, Trash2, Loader2, Bookmark } from 'lucide-react';
 import { getSavedCreators, removeSavedCreator } from '../../lib/api';
+import { useApp } from '../../context/AppContext';
 
 export const SavedCreators: React.FC = () => {
   const [savedCreators, setSavedCreators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { refreshAppData } = useApp();
 
   const fetchSavedCreators = async () => {
     try {
@@ -31,6 +33,7 @@ export const SavedCreators: React.FC = () => {
   const handleRemove = async (id: string) => {
     try {
       await removeSavedCreator(id);
+      await refreshAppData();
       fetchSavedCreators();
     } catch (err) {
       console.error('Error removing saved creator:', err);
@@ -61,16 +64,16 @@ export const SavedCreators: React.FC = () => {
           ) : (
             savedCreators.map((item) => {
               const creator = item.creatorId || item;
-              const creatorId = creator._id || creator.id || item.creatorId;
-              const name = creator.fullName || creator.name || 'Creator';
+              const creatorId = creator._id || creator.id || item.creatorId || item._id || item.id;
+              const name = creator.userId?.fullName || creator.fullName || creator.name || 'Creator';
               const category = creator.category || creator.primaryContentNiche || 'Content Creator';
-              const creatorAvatar = creator.avatar || creator.profileImage?.url || creator.profileImage || creator.userId?.profileImage;
+              const rawAvatar = creator.profileImage?.url || creator.userId?.profileImage?.url || creator.avatar || creator.profileImage || creator.userId?.profileImage;
 
               return (
-                <Card key={item._id || item.id} hoverable className="p-5 border-slate-200/90 space-y-4 animate-fade-in">
+                <Card key={item._id || item.id || creatorId} hoverable className="p-5 border-slate-200/90 space-y-4 animate-fade-in">
                   <div className="flex items-center gap-3">
                     <Avatar
-                      src={typeof creatorAvatar === 'object' ? creatorAvatar?.url : creatorAvatar}
+                      src={typeof rawAvatar === 'object' ? rawAvatar?.url : rawAvatar}
                       name={name}
                       size="w-12 h-12"
                       textSize="text-sm"
@@ -80,8 +83,9 @@ export const SavedCreators: React.FC = () => {
                       <Badge variant="purple">{category}</Badge>
                     </div>
                     <button
-                      onClick={() => handleRemove(item._id || item.id || creatorId)}
-                      className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl"
+                      onClick={() => handleRemove(creatorId)}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95 cursor-pointer"
+                      title="Remove from saved"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -97,13 +101,13 @@ export const SavedCreators: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       to={`/brand/creator/${creatorId}`}
-                      className="py-2 text-center text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                      className="py-2 text-center text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
                     >
                       Profile
                     </Link>
                     <Link
-                      to={`/brand/discover`}
-                      className="py-2 text-center text-xs font-bold text-white bg-[#EC4899] hover:bg-pink-600 rounded-xl"
+                      to={`/brand/creator/${creatorId}`}
+                      className="py-2 text-center text-xs font-bold text-white bg-[#EC4899] hover:bg-pink-600 rounded-xl transition-all"
                     >
                       Invite
                     </Link>

@@ -166,11 +166,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setNegotiations(negRes.data);
         }
         if (savedRes?.success && Array.isArray(savedRes.data)) {
-          const ids = savedRes.data.map((item: any) => {
+          const idsSet = new Set<string>();
+          savedRes.data.forEach((item: any) => {
             const creator = item.creatorId || item;
-            return String(creator._id || creator.id || item.creatorId || item._id);
+            if (creator._id) idsSet.add(String(creator._id));
+            if (creator.id) idsSet.add(String(creator.id));
+            if (creator.userId?._id) idsSet.add(String(creator.userId._id));
+            if (creator.userId?.id) idsSet.add(String(creator.userId.id));
+            if (typeof creator.userId === 'string') idsSet.add(creator.userId);
+            if (item._id) idsSet.add(String(item._id));
           });
-          setSavedCreatorIds(ids);
+          setSavedCreatorIds(Array.from(idsSet));
         }
       } catch (err) {
         console.error('Error fetching brand data for AppContext:', err);
@@ -189,14 +195,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((res) => {
         if (res?.success && res.data?.preferences) {
           const { timezone, currency } = res.data.preferences;
-          setUserPreferences((prev) => ({
-            ...prev,
-            timezone: timezone || prev.timezone,
-            currency: currency || prev.currency
-          }));
+          if (timezone || currency) {
+            setUserPreferences({
+              timezone: timezone || 'Asia/Kolkata',
+              currency: currency || 'INR'
+            });
+          }
         }
       })
-      .catch(() => null);
+      .catch((_) => {
+        // Unauthenticated or default fallback
+      });
   }, [token, isGuest]);
 
   const formatCurrency = (amount: number | string, fromCurrency = 'INR') => {
@@ -216,17 +225,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Toast System
-  const addToast = (
-    type: 'success' | 'error' | 'info',
-    title: string,
-    message?: string,
-    actionLabel?: string,
-    onAction?: () => void
-  ) => {
-    const id = `toast-${Date.now()}`;
-    const newToast: Toast = { id, type, title, message, actionLabel, onAction };
-    setToasts((prev) => [newToast, ...prev]);
-
+  const addToast = (type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, title, message, actionLabel, onAction }]);
     setTimeout(() => {
       removeToast(id);
     }, 4000);
@@ -236,32 +237,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Toggle Saved Creator (Persisted to Backend MongoDB)
+  // Toggle Saved Creator
   const toggleSaveCreator = async (creatorId: string) => {
-    if (!creatorId) return;
     const isSaved = savedCreatorIds.includes(creatorId);
 
-    // Optimistic UI Update
-    setSavedCreatorIds((prev) => (isSaved ? prev.filter((id) => id !== creatorId) : [...prev, creatorId]));
-
-    addToast(
-      isSaved ? 'info' : 'success',
-      isSaved ? 'Creator removed from saved list' : 'Creator saved to your list',
-      undefined,
-      'Undo',
-      () => toggleSaveCreator(creatorId)
+    // Optimistic UI update
+    setSavedCreatorIds((prev) =>
+      isSaved ? prev.filter((id) => id !== creatorId) : [...prev, creatorId]
     );
 
     try {
       if (isSaved) {
         await removeSavedCreator(creatorId);
+        addToast('info', 'Creator removed from saved list');
       } else {
         await saveCreator(creatorId);
+        addToast('success', 'Creator saved to your list');
       }
-    } catch (err) {
-      console.error('Failed to sync saved creator to backend:', err);
-      // Revert optimistic update on backend error
-      setSavedCreatorIds((prev) => (isSaved ? [...prev, creatorId] : prev.filter((id) => id !== creatorId)));
+    } catch (err: any) {
+      // Rollback on failure
+      setSavedCreatorIds((prev) =>
+        isSaved ? [...prev, creatorId] : prev.filter((id) => id !== creatorId)
+      );
+      addToast('error', 'Failed to update saved creator', err?.message || 'Please try again.');
     }
   };
 
