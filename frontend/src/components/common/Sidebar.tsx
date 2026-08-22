@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
       )}
 
       {/* Nav Menu */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
         {currentNav.map((item) => {
           const Icon = item.icon;
           return (
@@ -148,22 +148,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
               to={item.path}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                `relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 group ${
                   isActive
-                    ? 'bg-gradient-to-r from-pink-50 to-purple-50/50 text-[#EC4899] font-extrabold border-l-3 border-[#EC4899] shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-gradient-to-r from-pink-50/90 via-purple-50/50 to-white text-[#EC4899] shadow-xs border border-pink-100/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
                 }`
               }
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span className="truncate">{item.name}</span>
-              </div>
-              {item.badge && item.badge > 0 ? (
-                <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-[#EC4899] text-white shadow-2xs">
-                  {item.badge}
-                </span>
-              ) : null}
+              {({ isActive }) => (
+                <>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 transition-all duration-200 ${isActive ? 'text-[#EC4899] scale-110' : 'text-slate-400 group-hover:text-slate-700 group-hover:scale-110'}`} />
+                    <span className="truncate tracking-tight">{item.name}</span>
+                  </div>
+                  {item.badge && item.badge > 0 ? (
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-[#EC4899] to-[#8B5CF6] text-white shadow-xs animate-pulse-glow">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                  {isActive && (
+                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-[#EC4899] to-[#8B5CF6]" />
+                  )}
+                </>
+              )}
             </NavLink>
           );
         })}

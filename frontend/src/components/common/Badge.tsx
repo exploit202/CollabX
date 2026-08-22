@@ -5,17 +5,24 @@ interface BadgeProps {
   variant?: 'pink' | 'purple' | 'emerald' | 'amber' | 'slate' | 'rose' | 'sky';
   className?: string;
   dot?: boolean;
+  pulse?: boolean;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ children, variant = 'pink', className = '', dot = false }) => {
+export const Badge: React.FC<BadgeProps> = ({
+  children,
+  variant = 'pink',
+  className = '',
+  dot = false,
+  pulse = false
+}) => {
   const variantStyles = {
-    pink: 'bg-pink-50/90 text-pink-700 border-pink-200/80 shadow-2xs',
-    purple: 'bg-purple-50/90 text-purple-700 border-purple-200/80 shadow-2xs',
-    emerald: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80 shadow-2xs',
-    amber: 'bg-amber-50/90 text-amber-800 border-amber-200/80 shadow-2xs',
-    slate: 'bg-slate-100/90 text-slate-700 border-slate-200/80 shadow-2xs',
-    rose: 'bg-rose-50/90 text-rose-700 border-rose-200/80 shadow-2xs',
-    sky: 'bg-sky-50/90 text-sky-700 border-sky-200/80 shadow-2xs',
+    pink: 'bg-pink-50/90 text-pink-700 border-pink-200/90 shadow-2xs hover:bg-pink-100/90',
+    purple: 'bg-purple-50/90 text-purple-700 border-purple-200/90 shadow-2xs hover:bg-purple-100/90',
+    emerald: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/90 shadow-2xs hover:bg-emerald-100/90',
+    amber: 'bg-amber-50/90 text-amber-800 border-amber-200/90 shadow-2xs hover:bg-amber-100/90',
+    slate: 'bg-slate-100/90 text-slate-700 border-slate-200/90 shadow-2xs hover:bg-slate-200/90',
+    rose: 'bg-rose-50/90 text-rose-700 border-rose-200/90 shadow-2xs hover:bg-rose-100/90',
+    sky: 'bg-sky-50/90 text-sky-700 border-sky-200/90 shadow-2xs hover:bg-sky-100/90',
   };
 
   const dotColors = {
@@ -30,9 +37,14 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = 'pink', classN
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-tight border backdrop-blur-2xs transition-all ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold tracking-wide uppercase border backdrop-blur-2xs transition-all duration-200 ${variantStyles[variant]} ${className}`}
     >
-      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`} />}
+      {dot && (
+        <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+          {pulse && <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${dotColors[variant]}`} />}
+          <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotColors[variant]}`} />
+        </span>
+      )}
       {children}
     </span>
   );

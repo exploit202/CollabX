@@ -4,7 +4,18 @@
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
     }
     to {
       opacity: 1;
@@ -28,12 +39,43 @@
       box-shadow: 0 0 15px -3px rgba(236, 72, 153, 0.15);
     }
     50% {
-      box-shadow: 0 0 25px 2px rgba(236, 72, 153, 0.3);
+      box-shadow: 0 0 25px 3px rgba(236, 72, 153, 0.35);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes gradientShift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes floatSlow {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-6px);
     }
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-scale-in {
@@ -43,18 +85,73 @@
   .animate-pulse-glow {
     animation: pulseGlow 3s infinite;
   }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradientShift 6s ease infinite;
+  }
+
+  .animate-float {
+    animation: floatSlow 4s ease-in-out infinite;
+  }
 }
 
-.quick-action {
-  @apply rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2.5 text-center text-xs font-bold text-slate-700 transition-all hover:border-pink-300 hover:bg-pink-50/80 hover:text-pink-600 hover:shadow-xs active:scale-[0.98];
-}
-
+/* Glassmorphism & Premium Surface Tokens */
 .glass-card {
   @apply bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200;
 }
 
+.glass-card-hover {
+  @apply bg-white/95 backdrop-blur-lg border border-slate-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-purple-300/80 transition-all duration-300;
+}
+
+.glass-panel {
+  @apply bg-gradient-to-b from-white/95 via-white/90 to-slate-50/90 backdrop-blur-xl border border-slate-200/80 shadow-sm;
+}
+
+.glass-header {
+  @apply bg-white/85 backdrop-blur-md border-b border-slate-200/80;
+}
+
+/* Glow & Accent Effects */
+.glow-pink {
+  box-shadow: 0 0 20px -3px rgba(236, 72, 153, 0.25);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px -3px rgba(139, 92, 246, 0.25);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.25);
+}
+
 .badge-glow {
   @apply shadow-[0_0_10px_-2px_rgba(236,72,153,0.3)];
+}
+
+/* Interactive Elements & Buttons */
+.quick-action {
+  @apply rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2.5 text-center text-xs font-bold text-slate-700 transition-all hover:border-pink-300 hover:bg-pink-50/80 hover:text-pink-600 hover:shadow-xs active:scale-[0.98];
+}
+
+.input-ring-focus {
+  @apply border-slate-200 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/10 transition-all duration-200;
+}
+
+/* Gradient Typography & Accents */
+.heading-gradient {
+  @apply bg-gradient-to-r from-slate-900 via-purple-950 to-indigo-900 bg-clip-text text-transparent;
+}
+
+.heading-gradient-pink {
+  @apply bg-gradient-to-r from-[#EC4899] via-pink-600 to-purple-600 bg-clip-text text-transparent;
 }
 
 /* Custom Scrollbar */
@@ -75,3 +172,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
