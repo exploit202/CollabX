@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { Search, Bell, LogOut, ChevronDown, Menu, Layers } from 'lucide-react';
+import { Bell, LogOut, ChevronDown, Menu, Layers } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from './Avatar';
 
@@ -16,17 +16,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const unreadCount = notifications.filter((n: any) => !n.read && !n.isRead).length;
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchTerm) return;
-    if (role === 'brand' || isGuest) {
-      navigate(`/brand/discover?q=${encodeURIComponent(searchTerm)}`);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-2">
@@ -51,18 +42,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
             CollabX
           </span>
         </Link>
-
-        {/* Desktop Search Input */}
-        <form onSubmit={handleSearch} className="relative w-72 hidden sm:block">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            placeholder={role === 'brand' || isGuest ? 'Search creators, niches...' : 'Search campaigns...'}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs bg-slate-50 border border-slate-200/80 rounded-xl pl-9 pr-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
-          />
-        </form>
       </div>
 
       {/* Right controls */}
