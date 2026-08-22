@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { Modal } from '../../components/common/Modal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
 import { CollaborationActivity } from '../../components/CollaborationActivity';
@@ -164,13 +165,18 @@ export const BrandActiveCollaborations: React.FC = () => {
               const campaignTitle = collab.campaignTitle || (typeof collab.campaignId === 'object' ? collab.campaignId?.title : '') || 'Campaign Collaboration';
               const deadlineStr = formatDate(collab.deadline || (typeof collab.campaignId === 'object' ? collab.campaignId?.deadline : null)) || 'No Deadline Specified';
 
+              const creatorAvatar = collab.creatorAvatar || collab.creatorId?.profileImage?.url || collab.creatorId?.profileImage;
+
               return (
                 <Card key={collabId} className="p-6 border-slate-200/90 space-y-4">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-lg">
-                        {collab.creatorName?.[0] || 'C'}
-                      </div>
+                      <Avatar
+                        src={typeof creatorAvatar === 'object' ? creatorAvatar?.url : creatorAvatar}
+                        name={collab.creatorName}
+                        size="w-12 h-12"
+                        textSize="text-base"
+                      />
                       <div>
                         <h3 className="text-base font-bold text-slate-900">{collab.creatorName}</h3>
                         <p className="text-xs text-slate-500">

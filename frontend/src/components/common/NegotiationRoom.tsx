@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Badge } from './Badge';
 import { Card } from './Card';
+import { Avatar } from './Avatar';
 import {
   getCreatorNegotiations,
   getBrandNegotiations,
@@ -119,6 +120,16 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
     return n.brandName || n.brandId?.fullName || 'Brand';
   };
 
+  const partnerAvatar = (n: any) => {
+    if (!n) return null;
+    if (role === 'brand') {
+      const img = n.creatorAvatar || n.creatorId?.profileImage?.url || n.creatorId?.profileImage;
+      return typeof img === 'object' ? img?.url : img || null;
+    }
+    const img = n.brandLogo || n.brandId?.profileImage?.url || n.brandId?.profileImage || n.brandId?.companyLogo;
+    return typeof img === 'object' ? img?.url : img || null;
+  };
+
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!current || price <= 0) return;
@@ -217,9 +228,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-xs shrink-0">
-                        {partnerName(n)?.[0] || 'P'}
-                      </div>
+                      <Avatar src={partnerAvatar(n)} name={partnerName(n)} size="w-9 h-9" textSize="text-xs" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-slate-900 truncate">{partnerName(n)}</p>
                         <p className="text-[10px] text-slate-500 truncate">{n.campaignName || n.campaignTitle || 'Campaign'}</p>
@@ -241,9 +250,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
               <>
                 <div className="p-4 bg-slate-50 border-b flex justify-between items-center gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-sm">
-                      {partnerName(current)?.[0] || 'P'}
-                    </div>
+                    <Avatar src={partnerAvatar(current)} name={partnerName(current)} size="w-10 h-10" textSize="text-sm" />
                     <div>
                       <p className="text-sm font-bold text-slate-900">{partnerName(current)}</p>
                       <p className="text-[10px] text-slate-500">{current.campaignName || current.campaignTitle}</p>

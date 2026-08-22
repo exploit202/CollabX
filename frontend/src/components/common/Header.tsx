@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
           >
-            <Avatar src={user?.avatar || user?.profileImage} name={user?.name || user?.fullName} size="w-7 h-7" textSize="text-[10px]" />
+            <Avatar src={typeof user?.profileImage === 'object' ? user?.profileImage?.url : (user?.profileImage || user?.avatar)} name={user?.name || user?.fullName} size="w-7 h-7" textSize="text-[10px]" />
             <span className="text-xs font-semibold text-slate-700 hidden md:inline truncate max-w-[100px]">
               {user?.name || user?.fullName || 'User'}
             </span>

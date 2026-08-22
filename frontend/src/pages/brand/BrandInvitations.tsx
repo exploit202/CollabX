@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { getBrandInvitations, createNegotiation } from '../../lib/api';
 
@@ -67,19 +68,18 @@ export const BrandInvitations: React.FC = () => {
             invitations.map((inv) => {
               const invId = inv._id || inv.id;
               const isOpening = openingId === invId;
-              const creatorAvatar = inv.creatorAvatar || inv.creatorId?.profileImage;
+              const creatorAvatar = inv.creatorAvatar || inv.creatorId?.profileImage?.url || inv.creatorId?.profileImage;
 
               return (
                 <Card key={invId} className="p-5 border-slate-200/90 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      {creatorAvatar ? (
-                        <img src={creatorAvatar} alt={inv.creatorName} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-sm">
-                          {inv.creatorName?.[0] || 'C'}
-                        </div>
-                      )}
+                      <Avatar
+                        src={typeof creatorAvatar === 'object' ? creatorAvatar?.url : creatorAvatar}
+                        name={inv.creatorName}
+                        size="w-10 h-10"
+                        textSize="text-xs"
+                      />
                       <div>
                         <h3 className="text-sm font-bold text-slate-900">{inv.creatorName || 'Creator'}</h3>
                         <p className="text-xs text-slate-500">Campaign: {inv.campaignTitle}</p>

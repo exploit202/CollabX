@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { SendInvitationModal } from '../../components/modals/SendInvitationModal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
 import { getCreatorById, reportCreator } from '../../lib/api';
@@ -120,10 +121,12 @@ export const CreatorDetailPage: React.FC = () => {
       <Card className="p-6 md:p-8 border-slate-200/90 shadow-md relative">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-start md:items-center gap-5">
-            <img
-              src={creator.avatar}
-              alt={creator.name}
-              className="w-20 h-20 rounded-full object-cover border-2 border-slate-200 shadow-sm shrink-0"
+            <Avatar
+              src={creator.profileImage?.url || creator.userId?.profileImage || creator.avatar || null}
+              name={creator.name}
+              size="w-20 h-20"
+              textSize="text-xl"
+              className="border-2 border-slate-200 shadow-sm shrink-0"
             />
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
@@ -353,7 +356,7 @@ export const CreatorDetailPage: React.FC = () => {
                 <Card key={rev.id || rev._id} className="p-4 border-slate-200/90 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <img src={rev.reviewerAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'} alt={rev.reviewerName} className="w-7 h-7 rounded-full object-cover" />
+                      <Avatar src={typeof rev.reviewerAvatar === 'object' ? rev.reviewerAvatar?.url : (rev.reviewerAvatar || rev.reviewer?.profileImage?.url || rev.reviewer?.profileImage || null)} name={rev.reviewerName} size="w-7 h-7" textSize="text-[10px]" />
                       <span className="text-xs font-bold text-slate-900">{rev.reviewerName}</span>
                     </div>
                     <div className="flex items-center text-amber-500 font-bold text-xs gap-1">

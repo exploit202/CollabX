@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { Modal } from '../../components/common/Modal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
 import { Upload, ExternalLink, Send, Loader2, AlertCircle, RotateCcw, Star, Flag } from 'lucide-react';
@@ -122,14 +123,19 @@ export const CreatorActiveCollaborations: React.FC = () => {
               const campaignTitle = collab.campaignTitle || (typeof collab.campaignId === 'object' ? collab.campaignId?.title : '') || 'Campaign Collaboration';
               const budgetAmount = collab.agreedBudget || collab.agreedPrice || 0;
               const deadlineStr = formatDeadline(collab.deadline || (typeof collab.campaignId === 'object' ? collab.campaignId?.deadline : null));
+              const brandLogo = collab.brandLogo || collab.brandId?.profileImage?.url || collab.brandId?.profileImage || collab.brandId?.companyLogo;
 
               return (
                 <Card key={collabId} className="p-6 border-slate-200/90 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-lg">
-                        {brandName[0] || 'B'}
-                      </div>
+                      <Avatar
+                        src={typeof brandLogo === 'object' ? brandLogo?.url : brandLogo}
+                        name={brandName}
+                        size="w-12 h-12"
+                        textSize="text-base"
+                        className="rounded-2xl shrink-0"
+                      />
                       <div>
                         <h3 className="text-base font-bold text-slate-900">{brandName}</h3>
                         <p className="text-xs text-slate-500">

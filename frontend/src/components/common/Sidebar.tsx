@@ -177,7 +177,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           onClick={onClose}
           className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-100 transition-colors"
         >
-          <Avatar src={user?.avatar || user?.profileImage} name={user?.name || user?.fullName} size="w-9 h-9" textSize="text-xs" />
+          <Avatar src={typeof user?.profileImage === 'object' ? user?.profileImage?.url : (user?.profileImage || user?.avatar)} name={user?.name || user?.fullName} size="w-9 h-9" textSize="text-xs" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-slate-800 truncate">{user?.name || user?.fullName || 'Your Account'}</p>
             <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>

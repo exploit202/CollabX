@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Star, Trash2, Loader2, Bookmark } from 'lucide-react';
 import { getSavedCreators, removeSavedCreator } from '../../lib/api';
@@ -63,13 +64,17 @@ export const SavedCreators: React.FC = () => {
               const creatorId = creator._id || creator.id || item.creatorId;
               const name = creator.fullName || creator.name || 'Creator';
               const category = creator.category || creator.primaryContentNiche || 'Content Creator';
+              const creatorAvatar = creator.avatar || creator.profileImage?.url || creator.profileImage || creator.userId?.profileImage;
 
               return (
                 <Card key={item._id || item.id} hoverable className="p-5 border-slate-200/90 space-y-4 animate-fade-in">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 font-bold flex items-center justify-center text-sm border border-slate-200">
-                      {name[0]}
-                    </div>
+                    <Avatar
+                      src={typeof creatorAvatar === 'object' ? creatorAvatar?.url : creatorAvatar}
+                      name={name}
+                      size="w-12 h-12"
+                      textSize="text-sm"
+                    />
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-slate-900 truncate">{name}</h3>
                       <Badge variant="purple">{category}</Badge>
