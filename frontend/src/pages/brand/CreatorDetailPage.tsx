@@ -155,32 +155,34 @@ export const CreatorDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0 justify-start md:justify-end">
             {!isGuest && (
               <>
                 <button
                   onClick={() => toggleSaveCreator(creator.id || creator._id)}
-                  className={`p-3 rounded-2xl border transition-all ${
+                  className={`p-3 rounded-2xl border transition-all active:scale-95 cursor-pointer ${
                     isSaved ? 'bg-pink-50 border-pink-200 text-[#EC4899]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
+                  title={isSaved ? 'Remove from Saved' : 'Save Creator'}
                 >
                   <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#EC4899]' : ''}`} />
                 </button>
 
                 <button
                   onClick={() => setShowInviteModal(true)}
-                  className="flex-1 md:flex-none px-6 py-3 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none px-5 py-3 bg-gradient-to-r from-[#EC4899] to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-pink-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                   Send Collaboration Request
                 </button>
+
                 <button
                   onClick={() => setShowReportModal(true)}
-                  className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2"
-                  title="Report Creator"
+                  className="px-3.5 py-3 bg-rose-50/80 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
+                  title="Report Creator Profile"
                 >
-                  <Flag className="w-4 h-4" />
-                  Report
+                  <Flag className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Report</span>
                 </button>
               </>
             )}
