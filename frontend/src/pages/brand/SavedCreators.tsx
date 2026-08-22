@@ -64,7 +64,7 @@ export const SavedCreators: React.FC = () => {
           ) : (
             savedCreators.map((item) => {
               const creator = item.creatorId || item;
-              const creatorId = creator._id || creator.id || item.creatorId || item._id || item.id;
+              const creatorId = creator.userId?._id || creator.userId?.id || (typeof creator.userId === 'string' ? creator.userId : null) || creator._id || creator.id || item.creatorId || item._id || item.id;
               const name = creator.userId?.fullName || creator.fullName || creator.name || 'Creator';
               const category = creator.category || creator.primaryContentNiche || 'Content Creator';
               const rawAvatar = creator.profileImage?.url || creator.userId?.profileImage?.url || creator.avatar || creator.profileImage || creator.userId?.profileImage;
