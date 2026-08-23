@@ -10,6 +10,7 @@ const brandRoutes = require('./modules/brand');
 const creatorAuthRoutes = require('./modules/creator/routes/creatorAuth.routes');
 const creatorRoutes = require('./modules/creator');
 const adminRoutes = require('./modules/admin/routes/admin.routes');
+const paymentDemoRoutes = require('./modules/payment/routes/paymentDemo.routes');
 const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
@@ -63,6 +64,7 @@ app.use('/api/brand', brandRoutes);
 app.use('/api/creator/auth', creatorAuthRoutes);
 app.use('/api/creator', creatorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentDemoRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {

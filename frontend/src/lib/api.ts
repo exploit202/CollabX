@@ -139,6 +139,12 @@ export const createCampaign = (data: any) =>
 export const getCampaignById = (id: string) =>
   request<{ success: boolean; data: any }>(`/api/brand/campaigns/${id}`);
 
+export const updateCampaignStatusApi = (id: string, status: string) =>
+  request<{ success: boolean; data: any }>(`/api/brand/campaigns/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+
 export const getSavedCreators = () =>
   request<{ success: boolean; data: any[] }>('/api/brand/saved-creators');
 
@@ -397,22 +403,37 @@ export const updatePayoutAccount = (data: any) =>
     body: JSON.stringify(data)
   });
 
-export const initiateEscrowPayment = (data: { collaborationId: string; amount?: number; currency?: string }) =>
-  request<{ success: boolean; data: any }>('/api/brand/payments/escrow', {
+export const fundEscrow = (data: { collaborationId: string; amount?: number; currency?: string }) =>
+  request<{ success: boolean; message: string; data: any }>('/api/payments/fund', {
     method: 'POST',
     body: JSON.stringify(data)
   });
 
-export const releaseEscrowPayment = (paymentId: string) =>
-  request<{ success: boolean; data: any }>(`/api/brand/payments/${paymentId}/release`, {
-    method: 'PATCH'
+export const releaseEscrow = (data: { collaborationId?: string; paymentId?: string; escrowId?: string }) =>
+  request<{ success: boolean; message: string; data: any }>('/api/payments/release', {
+    method: 'POST',
+    body: JSON.stringify(data)
   });
 
+export const getPayments = (params?: { collaborationId?: string; status?: string }) => {
+  const query = new URLSearchParams();
+  if (params?.collaborationId) query.set('collaborationId', params.collaborationId);
+  if (params?.status) query.set('status', params.status);
+  const qStr = query.toString();
+  return request<{ success: boolean; data: any[] }>(`/api/payments${qStr ? `?${qStr}` : ''}`);
+};
+
+export const initiateEscrowPayment = (data: { collaborationId: string; amount?: number; currency?: string }) =>
+  fundEscrow(data);
+
+export const releaseEscrowPayment = (paymentId: string, collaborationId?: string) =>
+  releaseEscrow({ paymentId, collaborationId });
+
 export const getBrandPayments = () =>
-  request<{ success: boolean; data: any[] }>('/api/brand/payments/brand');
+  getPayments();
 
 export const getCreatorPayments = () =>
-  request<{ success: boolean; data: any[] }>('/api/creator/payments/creator');
+  getPayments();
 
 export const getBrandAnalytics = () =>
   request<{ success: boolean; data: any }>('/api/brand/analytics');

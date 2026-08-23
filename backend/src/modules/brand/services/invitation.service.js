@@ -113,7 +113,7 @@ const createInvitation = async ({
     $inc: { applicationsCount: 1, invitationsCount: 1 }
   });
 
-  // 8. Create Notification for Creator
+  // 8. Create Notifications for Creator and Brand
   try {
     await notificationService.createNotification({
       userId: creator._id,
@@ -121,6 +121,16 @@ const createInvitation = async ({
       type: 'collaboration_invitation',
       title: 'New Campaign Invitation',
       message: `${brandName} invited you to collaborate on campaign "${campaign.title}" for ₹${numBudget.toLocaleString('en-IN')}.`,
+      entityType: 'Invitation',
+      entityId: invitation._id
+    });
+
+    await notificationService.createNotification({
+      userId: brandId,
+      senderId: creator._id,
+      type: 'invitation_sent',
+      title: 'Collaboration Invitation Sent',
+      message: `You sent a collaboration offer to ${creator.fullName} for "${campaign.title}" (₹${numBudget.toLocaleString('en-IN')}).`,
       entityType: 'Invitation',
       entityId: invitation._id
     });
@@ -196,6 +206,20 @@ const cancelInvitation = async ({ invitationId, brandId }) => {
 
   invitation.status = 'cancelled';
   await invitation.save();
+
+  try {
+    await notificationService.createNotification({
+      userId: invitation.creatorId?._id || invitation.creatorId,
+      senderId: brandId,
+      type: 'invitation_rejected',
+      title: 'Invitation Cancelled',
+      message: `${invitation.brandName || 'Brand'} has withdrawn their invitation for "${invitation.campaignTitle || 'Campaign'}".`,
+      entityType: 'Invitation',
+      entityId: invitation._id
+    });
+  } catch (err) {
+    console.error('Notification error on invitation cancellation:', err);
+  }
 
   return invitation;
 };

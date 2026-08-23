@@ -60,12 +60,27 @@ const createUserReport = async (reporterId, reporterRole, { reportedAgainst, rea
     throw error;
   }
 
-  return AdminReport.create({
+  const report = await AdminReport.create({
     reportedBy: reporterId,
     reportedAgainst: target._id,
     reason: String(reason).trim(),
     description: String(description || '').trim()
   });
+
+  try {
+    const { createNotification } = require('../../services/notification.service');
+    await createNotification(
+      reporterId,
+      'Report Submitted',
+      `Your report regarding "${String(reason).trim()}" has been submitted for admin review.`,
+      'report_submitted',
+      { entityId: report._id, entityType: 'AdminReport' }
+    );
+  } catch (err) {
+    console.error('Notification error on report submission:', err);
+  }
+
+  return report;
 };
 
 module.exports = { createUserReport };

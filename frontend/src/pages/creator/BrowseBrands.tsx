@@ -3,6 +3,7 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Search, Send, Instagram, Youtube, Twitter, Loader2 } from 'lucide-react';
 import { discoverCampaigns, expressCampaignInterest } from '../../lib/api';
+import { formatCurrency } from '../../utils/currency';
 
 const PLATFORM_ICONS: Record<string, React.ComponentType<any>> = {
   instagram: Instagram,
@@ -144,7 +145,7 @@ export const BrowseBrands: React.FC = () => {
                         <h3 className="text-base font-bold text-slate-900 mt-2">{camp.title}</h3>
                         <p className="text-xs text-slate-500 mt-0.5">{camp.brandName || 'Brand Partner'}</p>
                       </div>
-                      <span className="text-lg font-black text-slate-900">${camp.budget}</span>
+                      <span className="text-lg font-black text-slate-900">{formatCurrency(camp.budget)}</span>
                     </div>
 
                     <p className="text-xs text-slate-600 line-clamp-3">{camp.description}</p>

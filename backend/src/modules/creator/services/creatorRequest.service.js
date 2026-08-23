@@ -82,6 +82,15 @@ const respondToInvitation = async (invitationId, creatorId, status) => {
         entityType: 'Collaboration',
         entityId: activeCollaboration._id
       });
+      await creatorNotifService.createNotification({
+        userId: creatorId,
+        senderId: invitation.brandId,
+        type: 'collaboration_started',
+        title: 'Collaboration Started',
+        message: `You accepted "${invitation.brandName}"'s invitation for "${campaignTitle}". Deal active!`,
+        entityType: 'Collaboration',
+        entityId: activeCollaboration._id
+      });
     } catch (err) {
       console.error('Notification error on invitation accept:', err);
     }
@@ -94,6 +103,15 @@ const respondToInvitation = async (invitationId, creatorId, status) => {
         type: 'invitation_rejected',
         title: 'Invitation Declined',
         message: `Creator ${invitation.creatorName} declined your invitation for "${invitation.campaignTitle}".`,
+        entityType: 'Invitation',
+        entityId: invitation._id
+      });
+      await creatorNotifService.createNotification({
+        userId: creatorId,
+        senderId: invitation.brandId,
+        type: 'invitation_declined',
+        title: 'Invitation Declined',
+        message: `You declined the invitation from ${invitation.brandName} for "${invitation.campaignTitle}".`,
         entityType: 'Invitation',
         entityId: invitation._id
       });

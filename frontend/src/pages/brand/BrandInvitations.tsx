@@ -4,14 +4,16 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Avatar } from '../../components/common/Avatar';
-import { MessageSquare, Loader2 } from 'lucide-react';
-import { getBrandInvitations, createNegotiation } from '../../lib/api';
+import { MessageSquare, Loader2, Flag } from 'lucide-react';
+import { getBrandInvitations, createNegotiation, reportCreator } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 
 export const BrandInvitations: React.FC = () => {
-  const { formatCurrency, formatDate } = useApp();
+  const { formatCurrency, formatDate, addToast } = useApp();
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
   const navigate = useNavigate();
 
   const fetchInvitations = async () => {
@@ -129,6 +131,18 @@ export const BrandInvitations: React.FC = () => {
                     </span>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setReportTarget({
+                          id: String(inv.creatorId?._id || inv.creatorId),
+                          name: inv.creatorName || 'Creator'
+                        })}
+                        disabled={!inv.creatorId?._id && !inv.creatorId}
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold flex items-center gap-1 transition-all disabled:opacity-50"
+                        title="Report Creator"
+                      >
+                        <Flag className="w-3 h-3" /> Report
+                      </button>
+
                       {(inv.status === 'pending' || inv.status === 'negotiating') && (
                         <button
                           onClick={() => handleOpenDealRoom(invId)}
@@ -150,6 +164,23 @@ export const BrandInvitations: React.FC = () => {
             })
           )}
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole="creator"
+          onSubmit={async (data) => {
+            try {
+              await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
+          }}
+        />
       )}
     </div>
   );

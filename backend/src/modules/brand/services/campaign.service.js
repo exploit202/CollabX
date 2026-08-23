@@ -1,7 +1,22 @@
 const Campaign = require('../../../models/campaign.model');
+const { createNotification } = require('../../../services/notification.service');
 
 const createCampaign = async (campaignData) => {
-  return await Campaign.create(campaignData);
+  const campaign = await Campaign.create(campaignData);
+  try {
+    if (campaign.brandId) {
+      await createNotification(
+        campaign.brandId,
+        'Campaign Brief Created',
+        `Your campaign brief "${campaign.title}" has been published with budget ₹${Number(campaign.budget || 0).toLocaleString('en-IN')}.`,
+        'campaign_created',
+        { entityId: campaign._id, entityType: 'Campaign' }
+      );
+    }
+  } catch (err) {
+    console.error('Notification error on campaign creation:', err);
+  }
+  return campaign;
 };
 
 const getCampaigns = async (filters = {}) => {
@@ -44,6 +59,19 @@ const updateCampaignStatus = async (id, status) => {
   );
   if (!campaign) {
     throw new Error('Campaign not found');
+  }
+  try {
+    if (campaign.brandId) {
+      await createNotification(
+        campaign.brandId,
+        'Campaign Status Updated',
+        `Campaign brief "${campaign.title}" is now ${status}.`,
+        'campaign_updated',
+        { entityId: campaign._id, entityType: 'Campaign' }
+      );
+    }
+  } catch (err) {
+    console.error('Notification error on campaign status update:', err);
   }
   return campaign;
 };

@@ -8,6 +8,11 @@ const notificationSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    recipient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -26,31 +31,6 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: [
-        'invitation',
-        'invitation_sent',
-        'collaboration_invitation',
-        'invitation_response',
-        'invitation_accepted',
-        'invitation_declined',
-        'invitation_rejected',
-        'negotiation',
-        'offer_received',
-        'collaboration_created',
-        'deliverable_submitted',
-        'content_submitted',
-        'content_resubmitted',
-        'revision_requested',
-        'deliverable_approved',
-        'content_approved',
-        'collaboration_completed',
-        'escrow_deposited',
-        'payment_escrowed',
-        'payment_released',
-        'review_submitted',
-        'review_received',
-        'system'
-      ],
       default: 'system'
     },
     relatedId: {
@@ -60,6 +40,10 @@ const notificationSchema = new mongoose.Schema(
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
       default: null
+    },
+    entityType: {
+      type: String,
+      default: ''
     },
     read: {
       type: Boolean,
@@ -75,7 +59,16 @@ const notificationSchema = new mongoose.Schema(
   }
 );
 
-// Sync read and isRead fields
+// Sync read, isRead, userId and recipient fields
+notificationSchema.pre('validate', function () {
+  if (this.recipient && !this.userId) {
+    this.userId = this.recipient;
+  }
+  if (this.userId && !this.recipient) {
+    this.recipient = this.userId;
+  }
+});
+
 notificationSchema.pre('save', function () {
   if (this.isModified('isRead')) {
     this.read = this.isRead;
@@ -86,6 +79,12 @@ notificationSchema.pre('save', function () {
     this.relatedId = this.entityId;
   } else if (this.relatedId && !this.entityId) {
     this.entityId = this.relatedId;
+  }
+  if (this.recipient && !this.userId) {
+    this.userId = this.recipient;
+  }
+  if (this.userId && !this.recipient) {
+    this.recipient = this.userId;
   }
 });
 

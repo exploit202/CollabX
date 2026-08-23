@@ -52,6 +52,26 @@ const sendOtpEmail = async (toEmail, plainOtp) => {
   if (!toEmail) return { success: false, error: 'Recipient email is required.' };
   if (!plainOtp) return { success: false, error: 'OTP is required.' };
 
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+
+  // Development Fallback: In development mode, log OTP directly to console and bypass real SMTP
+  if (isDev) {
+    console.log('\n======================================================');
+    console.log('⚡ [DEV MODE - EMAIL VERIFICATION OTP]');
+    console.log(`📧 Recipient Email: ${toEmail}`);
+    console.log(`🔑 6-Digit OTP:     ${plainOtp}`);
+    console.log('⏳ Expiry:          10 minutes');
+    console.log('💡 Note: Enter this OTP in the signup verification box.');
+    console.log('======================================================\n');
+
+    return {
+      success: true,
+      messageId: `dev-simulated-${Date.now()}`,
+      isDevFallback: true,
+      devOtp: plainOtp
+    };
+  }
+
   const transporter = createTransporter();
 
   if (!transporter) {

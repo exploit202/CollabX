@@ -32,7 +32,7 @@ import {
 
 export const CreatorDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { savedCreatorIds, toggleSaveCreator, formatCurrency } = useApp();
+  const { savedCreatorIds, toggleSaveCreator, formatCurrency, addToast } = useApp();
   const { isGuest } = useAuth();
 
   const [creator, setCreator] = useState<any | null>(null);
@@ -394,7 +394,12 @@ export const CreatorDetailPage: React.FC = () => {
         onSubmit={async (data) => {
           const creatorId = String(creator?.id || creator?._id || creator?.userId || '');
           if (!creatorId) return;
-          await reportCreator({ reportedAgainst: creatorId, ...data });
+          try {
+            await reportCreator({ reportedAgainst: creatorId, ...data });
+            addToast('success', 'Report Submitted', `Your report against ${creator?.name || 'Creator'} has been submitted for admin review.`);
+          } catch (err: any) {
+            addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+          }
         }}
       />
     </div>

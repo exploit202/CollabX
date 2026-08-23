@@ -22,6 +22,7 @@ export interface User {
 interface AuthContextType {
   user: any;
   role: UserRole;
+  token: string | null;
   isAuthenticated: boolean;
   isGuest: boolean;
   isLoading: boolean;
@@ -35,6 +36,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [tokenState, setTokenState] = useState<string | null>(() => getToken());
   const [role, setRole] = useState<UserRole>(() => {
     const savedRole = localStorage.getItem('collabx_role') as UserRole;
     return savedRole && ['brand', 'creator', 'admin', 'guest'].includes(savedRole) ? savedRole : 'guest';
@@ -60,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (token: string, userData: any, userRole?: UserRole) => {
     setToken(token);
+    setTokenState(token);
     const assignedRole = userRole || userData?.role || 'brand';
     setRole(assignedRole);
     setUser(userData);
@@ -71,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setToken(null);
+    setTokenState(null);
     localStorage.removeItem('collabx_role');
     localStorage.removeItem('collabx_user');
     setIsAuthenticated(false);
@@ -189,6 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         role,
+        token: tokenState,
         isAuthenticated,
         isGuest,
         isLoading,

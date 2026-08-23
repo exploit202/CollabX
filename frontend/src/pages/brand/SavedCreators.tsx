@@ -4,14 +4,16 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Avatar } from '../../components/common/Avatar';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Star, Trash2, Loader2, Bookmark } from 'lucide-react';
-import { getSavedCreators, removeSavedCreator } from '../../lib/api';
+import { Star, Trash2, Loader2, Bookmark, Flag } from 'lucide-react';
+import { getSavedCreators, removeSavedCreator, reportCreator } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 import { useApp } from '../../context/AppContext';
 
 export const SavedCreators: React.FC = () => {
   const [savedCreators, setSavedCreators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { refreshAppData } = useApp();
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
+  const { refreshAppData, addToast } = useApp();
 
   const fetchSavedCreators = async () => {
     try {
@@ -82,13 +84,22 @@ export const SavedCreators: React.FC = () => {
                       <h3 className="text-sm font-bold text-slate-900 truncate">{name}</h3>
                       <Badge variant="purple">{category}</Badge>
                     </div>
-                    <button
-                      onClick={() => handleRemove(creatorId)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95 cursor-pointer"
-                      title="Remove from saved"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setReportTarget({ id: creatorId, name: creator.name || 'Creator' })}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-95 cursor-pointer"
+                        title="Report Creator"
+                      >
+                        <Flag className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleRemove(creatorId)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95 cursor-pointer"
+                        title="Remove from saved"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl">
@@ -117,6 +128,23 @@ export const SavedCreators: React.FC = () => {
             })
           )}
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole="creator"
+          onSubmit={async (data) => {
+            try {
+              await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
+          }}
+        />
       )}
     </div>
   );

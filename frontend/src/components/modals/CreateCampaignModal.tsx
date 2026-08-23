@@ -114,7 +114,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({ isOpen
             </select>
           </label>
           <label className="text-xs font-semibold text-slate-700">
-            Total Budget ($)
+            Total Budget (₹)
             <input
               type="number"
               min="1"

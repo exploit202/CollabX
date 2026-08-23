@@ -114,13 +114,15 @@ const expressInterest = async (creatorId, campaignId) => {
   });
 
   try {
-    const notificationService = require('../../brand/services/notification.service');
-    await notificationService.createNotification({
+    const { createNotification } = require('../../../services/notification.service');
+    await createNotification({
       userId: brandUserId,
+      recipient: brandUserId,
       senderId: creator._id,
       type: 'invitation_sent',
       title: 'New Creator Interest',
       message: `${creator.fullName} expressed interest in your campaign "${campaign.title}".`,
+      entityType: 'Invitation',
       entityId: newRequest._id
     });
   } catch (err) {
