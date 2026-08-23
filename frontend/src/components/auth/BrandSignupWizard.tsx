@@ -100,11 +100,14 @@ export const BrandSignupWizard: React.FC = () => {
       });
 
       if (res.success && res.data?.user) {
-        if (res.data.token || (res.data as any).signupToken) {
-          setToken(res.data.token || (res.data as any).signupToken);
+        const authToken = (res.data as any).signupToken || res.data.token;
+        if (authToken) {
+          setToken(authToken);
         }
         setBrandUser(res.data.user);
         setStep(1);
+        // Auto-dispatch OTP email upon completing basic info
+        await handleRequestOtp(res.data.user?.email || brandInfo.email);
       }
     } catch (err: any) {
       setApiError(err.message || 'Brand Owner registration failed.');
@@ -113,7 +116,7 @@ export const BrandSignupWizard: React.FC = () => {
     }
   };
 
-  const handleRequestOtp = async () => {
+  const handleRequestOtp = async (targetEmail?: string) => {
     setOtpSending(true);
     setOtpError('');
     setOtpSuccessMsg('');
@@ -123,7 +126,7 @@ export const BrandSignupWizard: React.FC = () => {
       if (res.success) {
         setOtpSent(true);
         const devHint = (res as any).data?.devOtp ? ` [Dev Mode Code: ${(res as any).data.devOtp}]` : '';
-        setOtpSuccessMsg((res.message || `Verification code sent to ${brandUser?.email || brandInfo.email}.`) + devHint);
+        setOtpSuccessMsg((res.message || `Verification code sent to ${targetEmail || brandUser?.email || brandInfo.email}.`) + devHint);
       }
     } catch (err: any) {
       setOtpError(err.message || 'Failed to send verification email. Please try again.');
