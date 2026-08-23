@@ -65,7 +65,7 @@ export const request = async <T>(path: string, options: RequestInit = {}): Promi
 // AUTHENTICATION APIS
 // ==========================================
 export const registerBrand = (data: any) =>
-  request<{ success: boolean; data: { token: string; user: any; profile: any } }>(
+  request<{ success: boolean; data: { token: string; signupToken?: string; user: any; profile: any } }>(
     '/api/brand/auth/register',
     { method: 'POST', body: JSON.stringify(data) }
   );
@@ -77,7 +77,7 @@ export const loginBrand = (data: any) =>
   );
 
 export const registerCreator = (data: any) =>
-  request<{ success: boolean; data: { token: string; user: any; profile: any } }>(
+  request<{ success: boolean; data: { token: string; signupToken?: string; user: any; profile: any } }>(
     '/api/creator/auth/register',
     { method: 'POST', body: JSON.stringify(data) }
   );
@@ -101,7 +101,7 @@ export const verifyCreatorPlatformUrl = (platform: string, url: string) =>
   });
 
 export const requestCreatorOtp = () =>
-  request<{ success: boolean; message: string; data?: { emailSent: boolean; recipientEmail: string } }>(
+  request<{ success: boolean; message: string; data?: { emailSent: boolean; recipientEmail: string; devOtp?: string } }>(
     '/api/creator/auth/otp/send',
     { method: 'POST' }
   );
@@ -109,6 +109,18 @@ export const requestCreatorOtp = () =>
 export const verifyCreatorOtp = (otp: string) =>
   request<{ success: boolean; message: string; data: { user: any; token: string } }>(
     '/api/creator/auth/otp/verify',
+    { method: 'POST', body: JSON.stringify({ otp }) }
+  );
+
+export const requestBrandOtp = () =>
+  request<{ success: boolean; message: string; data?: { emailSent: boolean; recipientEmail: string; devOtp?: string } }>(
+    '/api/brand/auth/otp/send',
+    { method: 'POST' }
+  );
+
+export const verifyBrandOtp = (otp: string) =>
+  request<{ success: boolean; message: string; data: { user: any; token: string } }>(
+    '/api/brand/auth/otp/verify',
     { method: 'POST', body: JSON.stringify({ otp }) }
   );
 
