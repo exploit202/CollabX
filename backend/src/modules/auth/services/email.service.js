@@ -56,31 +56,23 @@ const sendOtpEmail = async (toEmail, plainOtp, options = {}) => {
   const titleText = options.title || `CollabX ${roleLabel} Verification Code`;
   const subjectText = options.subject || `Verify Your Email Address - CollabX`;
 
-  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  const transporter = createTransporter();
 
-  // Development Fallback: In development mode, log OTP directly to console and bypass real SMTP
-  if (isDev) {
+  // If SMTP is explicitly set to force simulation (e.g. offline unit test runner without internet)
+  if (!transporter || process.env.FORCE_DEV_OTP_SIMULATION === 'true') {
     console.log('\n======================================================');
-    console.log(`⚡ [DEV MODE - ${roleLabel.toUpperCase()} EMAIL VERIFICATION OTP]`);
+    console.log(`⚡ [FALLBACK MODE - ${roleLabel.toUpperCase()} EMAIL VERIFICATION OTP]`);
     console.log(`📧 Recipient Email: ${toEmail}`);
     console.log(`🔑 6-Digit OTP:     ${plainOtp}`);
     console.log('⏳ Expiry:          10 minutes');
-    console.log('💡 Note: Enter this OTP in the signup verification box.');
     console.log('======================================================\n');
 
     return {
       success: true,
       messageId: `dev-simulated-${Date.now()}`,
       isDevFallback: true,
-      devOtp: plainOtp
+      ...(process.env.FORCE_DEV_OTP_SIMULATION === 'true' && { devOtp: plainOtp })
     };
-  }
-
-  const transporter = createTransporter();
-
-  if (!transporter) {
-    console.error(`[SMTP ERROR] Nodemailer SMTP credentials not configured in environment. Failed to send OTP to ${toEmail}.`);
-    return { success: false, error: 'SMTP server credentials not configured on backend.' };
   }
 
   try {

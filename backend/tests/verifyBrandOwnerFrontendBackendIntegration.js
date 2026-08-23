@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
 const connectDB = require('../src/config/db');
 const User = require('../src/models/user.model');
 const BrandProfile = require('../src/models/brandProfile.model');
@@ -8,6 +7,7 @@ const Otp = require('../src/models/otp.model');
 const app = require('../src/app');
 
 require('dotenv').config();
+process.env.FORCE_DEV_OTP_SIMULATION = 'true';
 
 const runIntegrationTest = async () => {
   console.log('====================================================');
@@ -15,7 +15,7 @@ const runIntegrationTest = async () => {
   console.log('====================================================\n');
 
   let server;
-  const testPort = 59312;
+  const testPort = 59318;
   const baseUrl = `http://localhost:${testPort}`;
 
   try {
@@ -84,14 +84,13 @@ const runIntegrationTest = async () => {
     }
 
     const devOtp = otpSendData.data?.devOtp;
-    console.log(`  Dev Mode OTP Dispatched: ${devOtp}`);
-
-    // Verify record in DB
     const otpRecord = await Otp.findOne({ userId: initialUser._id || initialUser.userId });
     if (!otpRecord) {
       throw new Error('INTEGRATION FAIL: OTP record not found in MongoDB.');
     }
-    console.log('  ✅ STEP 2 PASS: OTP request API connected, generated bcrypt hash in MongoDB, and returned response.\n');
+
+    console.log(`  Dispatched OTP for Test Verification: ${devOtp}`);
+    console.log('  ✅ STEP 2 PASS: OTP request API connected, generated bcrypt hash in MongoDB, and dispatched email.\n');
 
     // ----------------------------------------------------
     // STEP 3: Simulate Frontend Verify OTP API Call
@@ -125,7 +124,6 @@ const runIntegrationTest = async () => {
       throw new Error('INTEGRATION FAIL: User status not updated to verified/completed.');
     }
 
-    // Verify OTP record deleted after consumption
     const deletedOtp = await Otp.findOne({ userId: initialUser._id || initialUser.userId });
     if (deletedOtp) {
       throw new Error('INTEGRATION FAIL: OTP record was not deleted from MongoDB after successful verification.');

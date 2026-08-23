@@ -7,6 +7,7 @@ const Otp = require('../src/models/otp.model');
 const app = require('../src/app');
 
 require('dotenv').config();
+process.env.FORCE_DEV_OTP_SIMULATION = 'true';
 
 const runTests = async () => {
   console.log('====================================================');

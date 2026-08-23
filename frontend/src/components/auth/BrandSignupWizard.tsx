@@ -125,8 +125,7 @@ export const BrandSignupWizard: React.FC = () => {
       const res = await requestBrandOtp();
       if (res.success) {
         setOtpSent(true);
-        const devHint = (res as any).data?.devOtp ? ` [Dev Mode Code: ${(res as any).data.devOtp}]` : '';
-        setOtpSuccessMsg((res.message || `Verification code sent to ${targetEmail || brandUser?.email || brandInfo.email}.`) + devHint);
+        setOtpSuccessMsg(`Verification code sent successfully to ${targetEmail || brandUser?.email || brandInfo.email}. Please check your inbox.`);
       }
     } catch (err: any) {
       setOtpError(err.message || 'Failed to send verification email. Please try again.');
