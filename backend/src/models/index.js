@@ -13,6 +13,7 @@ const Portfolio = require('./portfolio.model');
 const Review = require('./review.model');
 const Pricing = require('./pricing.model');
 const Payment = require('./payment.model');
+const Escrow = require('./escrow.model');
 const CreatorPayoutAccount = require('./creatorPayoutAccount.model');
 const AdminSettings = require('./adminSettings.model');
 const AdminReport = require('./adminReport.model');
@@ -36,6 +37,7 @@ module.exports = {
   Review,
   Pricing,
   Payment,
+  Escrow,
   CreatorPayoutAccount,
   AdminSettings,
   AdminReport,

@@ -247,7 +247,8 @@ export const CreatorSignupWizard: React.FC = () => {
       const res = await requestCreatorOtp();
       if (res.success) {
         setOtpSent(true);
-        setOtpSuccessMsg(res.message || `Verification code sent to ${creator?.email || basicInfo.email}.`);
+        const devHint = (res as any).data?.devOtp ? ` [Dev Mode Code: ${(res as any).data.devOtp}]` : '';
+        setOtpSuccessMsg((res.message || `Verification code sent to ${creator?.email || basicInfo.email}.`) + devHint);
       }
     } catch (err: any) {
       setOtpError(err.message || 'Failed to send verification email. Please try again.');

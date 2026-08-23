@@ -124,7 +124,9 @@ const requestEmailOtp = async (req, res, next) => {
 
     return successResponse(res, 200, `OTP sent successfully to ${userEmail}.`, {
       emailSent: true,
-      recipientEmail: userEmail
+      recipientEmail: userEmail,
+      ...(emailResult.devOtp && { devOtp: emailResult.devOtp }),
+      ...(process.env.NODE_ENV === 'development' ? { devOtp: plainOtp, devNote: 'OTP logged to server console' } : {})
     });
   } catch (error) {
     next(error);

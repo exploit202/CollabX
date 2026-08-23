@@ -44,7 +44,7 @@ const sendCounterOffer = async ({ negotiationId, creatorId, message, proposedBud
 
   const user = await User.findById(creatorId).select('fullName profileImage role');
   const finalBudget = Number(proposedBudget || proposedPrice || 0);
-  const finalMessage = message || notes || `Counter offer submitted for $${finalBudget}.`;
+  const finalMessage = message || notes || `Counter offer submitted for ₹${finalBudget.toLocaleString('en-IN')}.`;
 
   const newOffer = {
     senderId: user._id,
@@ -69,8 +69,16 @@ const sendCounterOffer = async ({ negotiationId, creatorId, message, proposedBud
       userId: negotiation.brandId,
       senderId: creatorId,
       type: 'offer_received',
-      title: 'New Counter Offer Received',
-      message: `Creator ${user.fullName} submitted a counter offer of $${finalBudget} for "${negotiation.campaignName}".`,
+      title: 'Counter Offer Received',
+      message: `Creator ${user.fullName} submitted a counter offer of ₹${finalBudget.toLocaleString('en-IN')} for "${negotiation.campaignName}".`,
+      entityId: negotiation._id
+    });
+    await notificationService.createNotification({
+      userId: creatorId,
+      senderId: negotiation.brandId,
+      type: 'negotiation',
+      title: 'Counter Offer Sent',
+      message: `You submitted a counter offer of ₹${finalBudget.toLocaleString('en-IN')} to "${negotiation.brandName}".`,
       entityId: negotiation._id
     });
   } catch (err) {

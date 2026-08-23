@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import {
   CreatorProfile,
@@ -22,6 +22,7 @@ import {
 import { formatCurrency as utilsFormatCurrency, convertCurrency as utilsConvertCurrency } from '../utils/currency';
 import { formatDate as utilsFormatDate, formatDateTime as utilsFormatDateTime } from '../utils/dateTime';
 import {
+  getToken,
   getBrandSettings,
   getCreatorNotifications,
   markCreatorNotificationRead,
@@ -94,11 +95,6 @@ interface AppContextType {
   updateCampaign: (campaignId: string, updates: Partial<Campaign>) => void;
   deleteCampaign: (campaignId: string) => void;
 
-  submitContentDeliverable: (collaborationId: string, url: string, notes: string) => void;
-  approveDeliverable: (collaborationId: string, feedback: string) => void;
-  addCreatorReview: (creatorId: string, review: Omit<Review, 'id' | 'date'>) => void;
-
-  addPortfolioItem: (creatorId: string, item: Omit<PortfolioItem, 'id' | 'date'>) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
 }
@@ -106,7 +102,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { role, token, isGuest } = useAuth();
+  const { role, token: authToken, isGuest } = useAuth();
+  const token = authToken || getToken();
+
   const [creators, setCreators] = useState<CreatorProfile[]>(mockCreators);
   const [brands, setBrands] = useState<BrandProfile[]>(mockBrands);
   const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
@@ -122,16 +120,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currency: 'INR'
   });
 
-  const refreshAppData = useCallback(async () => {
-    if (!token || isGuest) {
-      setNotifications([]);
-      setInvitations([]);
-      setNegotiations([]);
+  const isFetchingRef = useRef<boolean>(false);
+  const knownNotifIdsRef = useRef<Set<string>>(new Set());
+  const isInitializedRef = useRef<boolean>(false);
+
+  // Reset tracking on user switch or logout
+  useEffect(() => {
+    isInitializedRef.current = false;
+    knownNotifIdsRef.current = new Set();
+  }, [token, role]);
+
+  const addToast = useCallback((type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => {
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 4);
+    setToasts((prev) => [...prev, { id, type, title, message, actionLabel, onAction }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }, []);
+
+  const handleInboundNotifAlerts = useCallback((newNotifs: any[]) => {
+    if (!Array.isArray(newNotifs)) return;
+
+    if (!isInitializedRef.current) {
+      newNotifs.forEach((n) => {
+        const nId = String(n._id || n.id);
+        if (nId) knownNotifIdsRef.current.add(nId);
+      });
+      isInitializedRef.current = true;
       return;
     }
 
-    if (role === 'creator') {
-      try {
+    // Process new incoming notifications
+    newNotifs.forEach((n) => {
+      const nId = String(n._id || n.id);
+      const isUnread = !n.read && !n.isRead;
+      if (nId && isUnread && !knownNotifIdsRef.current.has(nId)) {
+        knownNotifIdsRef.current.add(nId);
+        addToast('info', n.title || 'New Notification', n.message || '');
+      } else if (nId) {
+        knownNotifIdsRef.current.add(nId);
+      }
+    });
+  }, [addToast]);
+
+  const refreshAppData = useCallback(async () => {
+    const activeToken = getToken() || token;
+    if (!activeToken || isGuest || isFetchingRef.current) {
+      if (!activeToken || isGuest) {
+        setNotifications([]);
+        setInvitations([]);
+        setNegotiations([]);
+      }
+      return;
+    }
+
+    isFetchingRef.current = true;
+
+    try {
+      if (role === 'creator') {
         const [notifRes, reqRes, negRes] = await Promise.all([
           getCreatorNotifications().catch(() => null),
           getCreatorRequests().catch(() => null),
@@ -140,6 +186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (notifRes?.success && Array.isArray(notifRes.data)) {
           setNotifications(notifRes.data);
+          handleInboundNotifAlerts(notifRes.data);
         }
         if (reqRes?.success && Array.isArray(reqRes.data)) {
           setInvitations(reqRes.data);
@@ -147,11 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (negRes?.success && Array.isArray(negRes.data)) {
           setNegotiations(negRes.data);
         }
-      } catch (err) {
-        console.error('Error fetching creator data for AppContext:', err);
-      }
-    } else if (role === 'brand') {
-      try {
+      } else if (role === 'brand') {
         const [notifRes, invRes, negRes, savedRes] = await Promise.all([
           getBrandNotifications().catch(() => null),
           getBrandInvitations().catch(() => null),
@@ -161,6 +204,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (notifRes?.success && Array.isArray(notifRes.data)) {
           setNotifications(notifRes.data);
+          handleInboundNotifAlerts(notifRes.data);
         }
         if (invRes?.success && Array.isArray(invRes.data)) {
           setInvitations(invRes.data);
@@ -181,28 +225,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
           setSavedCreatorIds(Array.from(idsSet));
         }
-      } catch (err) {
-        console.error('Error fetching brand data for AppContext:', err);
-      }
-    } else if (role === 'admin') {
-      try {
+      } else if (role === 'admin') {
         const notifRes = await getAdminNotifications().catch(() => null);
         if (notifRes?.success && Array.isArray(notifRes.data)) {
           setNotifications(notifRes.data);
+          handleInboundNotifAlerts(notifRes.data);
         }
-      } catch (err) {
-        console.error('Error fetching admin notifications for AppContext:', err);
       }
+    } catch (err) {
+      console.error('Error in refreshAppData:', err);
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [role, token, isGuest]);
+  }, [role, token, isGuest, handleInboundNotifAlerts]);
 
+  // Initial load
   useEffect(() => {
     refreshAppData();
   }, [refreshAppData]);
 
+  // 15-Second Heartbeat Polling and Tab Visibility Auto-Sync
+  useEffect(() => {
+    const activeToken = getToken() || token;
+    if (!activeToken || isGuest) return;
+
+    const intervalId = setInterval(() => {
+      refreshAppData();
+    }, 15000);
+
+    const handleVisibilitySync = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAppData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilitySync);
+    window.addEventListener('focus', handleVisibilitySync);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
+      window.removeEventListener('focus', handleVisibilitySync);
+    };
+  }, [token, isGuest, refreshAppData]);
+
   // Attempt to restore user preferences from backend on initial mount
   useEffect(() => {
-    if (!token || isGuest) return;
+    const activeToken = getToken() || token;
+    if (!activeToken || isGuest) return;
     getBrandSettings()
       .then((res) => {
         if (res?.success && res.data?.preferences) {
@@ -234,15 +304,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const formatDateTime = (dateInput: string | Date | number | null) => {
     return utilsFormatDateTime(dateInput, userPreferences.timezone || 'Asia/Kolkata');
-  };
-
-  // Toast System
-  const addToast = (type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, type, title, message, actionLabel, onAction }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 4000);
   };
 
   const removeToast = (id: string) => {

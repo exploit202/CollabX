@@ -41,7 +41,7 @@ const initiateEscrowPayment = async (brandUserId, { collaborationId, amount, cur
     brandId: brandUserId,
     creatorId: collaboration.creatorId?._id || collaboration.creatorId,
     amount: Number(paymentAmount),
-    currency: currency || 'USD',
+    currency: currency || 'INR',
     status: 'escrowed',
     paymentMethod: paymentMethod || 'simulated_escrow',
     transactionId: `ESCROW-${Date.now()}`,
@@ -55,7 +55,16 @@ const initiateEscrowPayment = async (brandUserId, { collaborationId, amount, cur
       senderId: brandUserId,
       type: 'payment_escrowed',
       title: 'Escrow Funds Secured',
-      message: `Brand ${collaboration.brandName} deposited $${paymentAmount} into escrow for your collaboration.`,
+      message: `Brand ${collaboration.brandName} deposited ₹${Number(paymentAmount).toLocaleString('en-IN')} into escrow for your collaboration.`,
+      entityType: 'Payment',
+      entityId: payment._id
+    });
+    await notificationService.createNotification({
+      userId: brandUserId,
+      senderId: collaboration.creatorId?._id || collaboration.creatorId,
+      type: 'escrow_funded',
+      title: 'Escrow Payment Initiated',
+      message: `You deposited ₹${Number(paymentAmount).toLocaleString('en-IN')} into CollabX Escrow Vault for "${collaboration.campaignTitle}".`,
       entityType: 'Payment',
       entityId: payment._id
     });
@@ -118,7 +127,16 @@ const releaseEscrowPayment = async (paymentId, userId) => {
       senderId: userId,
       type: 'payment_released',
       title: 'Escrow Payout Released',
-      message: `Escrow payout of $${payment.amount} has been released to your payout account!`,
+      message: `Escrow payout of ₹${Number(payment.amount).toLocaleString('en-IN')} has been released to your account!`,
+      entityType: 'Payment',
+      entityId: payment._id
+    });
+    await notificationService.createNotification({
+      userId: userId,
+      senderId: payment.creatorId?._id || payment.creatorId,
+      type: 'escrow_released',
+      title: 'Escrow Payout Transferred',
+      message: `₹${Number(payment.amount).toLocaleString('en-IN')} payout has been successfully transferred to ${collaboration.creatorName || 'creator'}.`,
       entityType: 'Payment',
       entityId: payment._id
     });

@@ -7,7 +7,8 @@ import { Badge } from '../../components/common/Badge';
 import { Avatar } from '../../components/common/Avatar';
 import { SkeletonLoader } from '../../components/common/SkeletonLoader';
 import { SendInvitationModal } from '../../components/modals/SendInvitationModal';
-import { getDiscoverCreators } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
+import { getDiscoverCreators, reportCreator } from '../../lib/api';
 import {
   Search,
   Star,
@@ -21,11 +22,12 @@ import {
   MapPin,
   Package,
   Clock,
-  Loader2
+  Loader2,
+  Flag
 } from 'lucide-react';
 
 export const DiscoverCreators: React.FC = () => {
-  const { savedCreatorIds, toggleSaveCreator, formatCurrency } = useApp();
+  const { savedCreatorIds, toggleSaveCreator, formatCurrency, addToast } = useApp();
   const { isGuest } = useAuth();
   const [searchParams] = useSearchParams();
   const queryFromUrl = searchParams.get('q') || '';
@@ -38,6 +40,7 @@ export const DiscoverCreators: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [minEngagement, setMinEngagement] = useState<number>(0);
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
   const [sortBy, setSortBy] = useState('match');
 
   const [creators, setCreators] = useState<any[]>([]);
@@ -137,7 +140,7 @@ export const DiscoverCreators: React.FC = () => {
         <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Available creators</p><p className="text-xl font-black mt-1">{creators.length}</p></Card>
         <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Verified</p><p className="text-xl font-black mt-1 text-[#EC4899]">{creators.filter(c => c.verified).length}</p></Card>
         <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Avg. rating</p><p className="text-xl font-black mt-1 text-amber-500">{calculateAvgRating()}</p></Card>
-        <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Starting rate</p><p className="text-xl font-black mt-1">₹{(creators.length > 0 ? Math.min(...creators.map(c=>c.minStartingPrice || 5000)) : 5000).toLocaleString('en-IN')}</p></Card>
+        <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Starting rate</p><p className="text-xl font-black mt-1">{formatCurrency(creators.length > 0 ? Math.min(...creators.map(c=>c.minStartingPrice || 5000)) : 5000)}</p></Card>
       </div>
 
       {/* Filter Bar */}
@@ -329,18 +332,28 @@ export const DiscoverCreators: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Bookmark Button */}
+                      {/* Top Action Buttons (Save & Report) */}
                       {!isGuest && (
-                        <button
-                          onClick={() => toggleSaveCreator(cid)}
-                          className={`p-1.5 rounded-xl border transition-colors ${
-                            isSaved
-                              ? 'bg-pink-50 border-pink-200 text-[#EC4899]'
-                              : 'border-slate-200 text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#EC4899]' : ''}`} />
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => setReportTarget({ id: cid, name: creator.name })}
+                            className="p-1.5 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-colors"
+                            title="Report Creator"
+                          >
+                            <Flag className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => toggleSaveCreator(cid)}
+                            className={`p-1.5 rounded-xl border transition-colors ${
+                              isSaved
+                                ? 'bg-pink-50 border-pink-200 text-[#EC4899]'
+                                : 'border-slate-200 text-slate-400 hover:text-slate-600'
+                            }`}
+                            title={isSaved ? 'Remove from Saved' : 'Save Creator'}
+                          >
+                            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#EC4899]' : ''}`} />
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -440,6 +453,23 @@ export const DiscoverCreators: React.FC = () => {
         onClose={() => setSelectedCreatorForInvite(null)}
         creator={selectedCreatorForInvite}
       />
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole="creator"
+          onSubmit={async (data) => {
+            try {
+              await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

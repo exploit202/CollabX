@@ -20,7 +20,7 @@ import { getAdminDashboard, updateAdminUserVerification } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 
 export const AdminDashboard: React.FC = () => {
-  const { addToast } = useApp();
+  const { addToast, formatCurrency } = useApp();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -99,7 +99,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               <p className="text-xl font-black text-slate-900 mt-2">
-                ₹{Number(st.totalRevenue || 0).toLocaleString('en-IN')}
+                {formatCurrency(st.totalRevenue || 0)}
               </p>
               <span className="text-[10px] text-emerald-600 font-bold mt-1 block">Live DB Escrow Volume</span>
             </Card>

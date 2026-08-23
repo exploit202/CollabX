@@ -137,7 +137,7 @@ const createOffer = async ({
 
   const user = await User.findById(userId).select('fullName profileImage role');
   const finalBudget = Number(proposedBudget || proposedPrice || 0);
-  const finalMessage = message || notes || `Offer submitted for $${finalBudget}.`;
+  const finalMessage = message || notes || `Offer submitted for ₹${finalBudget.toLocaleString('en-IN')}.`;
 
   const newOffer = {
     senderId: user._id,
@@ -163,8 +163,16 @@ const createOffer = async ({
       userId: recipientId,
       senderId: userId,
       type: 'offer_received',
-      title: 'New Offer Received',
-      message: `${user.fullName} submitted an offer of $${finalBudget} for "${negotiation.campaignName}".`,
+      title: isBrand ? 'New Offer Received' : 'Counter Offer Received',
+      message: `${user.fullName} submitted an offer of ₹${finalBudget.toLocaleString('en-IN')} for "${negotiation.campaignName}".`,
+      entityId: negotiation._id
+    });
+    await notificationService.createNotification({
+      userId: userId,
+      senderId: recipientId,
+      type: 'negotiation',
+      title: 'Offer Sent',
+      message: `You submitted an offer of ₹${finalBudget.toLocaleString('en-IN')} for "${negotiation.campaignName}".`,
       entityId: negotiation._id
     });
   } catch (err) {
@@ -249,7 +257,7 @@ const acceptOffer = async ({ negotiationId, userId, offerId = null }) => {
     senderRole: isBrand ? 'brand' : 'creator',
     senderName: user.fullName,
     senderAvatar: user.profileImage || '',
-    message: `${roleName} ${user.fullName} accepted the $${agreedPrice} offer.`,
+    message: `${roleName} ${user.fullName} accepted the ₹${agreedPrice.toLocaleString('en-IN')} offer.`,
     proposedBudget: agreedPrice,
     status: 'accepted',
     isRead: false
@@ -306,7 +314,7 @@ const acceptOffer = async ({ negotiationId, userId, offerId = null }) => {
     await collaboration.save();
   }
 
-  // Trigger Notification to the other participant
+  // Trigger Notifications to both participants
   try {
     const recipientId = isBrand ? negotiation.creatorId : negotiation.brandId;
     const notificationService = require('./notification.service');
@@ -315,7 +323,15 @@ const acceptOffer = async ({ negotiationId, userId, offerId = null }) => {
       senderId: userId,
       type: 'invitation_accepted',
       title: 'Offer Accepted & Collaboration Activated',
-      message: `${roleName} ${user.fullName} accepted the $${agreedPrice} offer for campaign "${negotiation.campaignName}".`,
+      message: `${roleName} ${user.fullName} accepted the ₹${agreedPrice.toLocaleString('en-IN')} offer for "${negotiation.campaignName}". Collaboration is now active!`,
+      entityId: collaboration._id
+    });
+    await notificationService.createNotification({
+      userId: userId,
+      senderId: recipientId,
+      type: 'collaboration_started',
+      title: 'Collaboration Activated',
+      message: `You agreed to the ₹${agreedPrice.toLocaleString('en-IN')} offer for "${negotiation.campaignName}". Collaboration is now active!`,
       entityId: collaboration._id
     });
   } catch (err) {

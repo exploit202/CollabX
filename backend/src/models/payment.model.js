@@ -35,7 +35,7 @@ const paymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'escrowed', 'released', 'refunded', 'failed'],
+      enum: ['pending', 'funded', 'escrowed', 'released', 'refunded', 'failed'],
       default: 'pending',
       index: true
     },
@@ -46,6 +46,10 @@ const paymentSchema = new mongoose.Schema(
     transactionId: {
       type: String,
       default: ''
+    },
+    fundedAt: {
+      type: Date,
+      default: null
     },
     escrowedAt: {
       type: Date,

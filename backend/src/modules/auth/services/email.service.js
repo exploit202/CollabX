@@ -48,9 +48,33 @@ const verifyTransporter = async () => {
   }
 };
 
-const sendOtpEmail = async (toEmail, plainOtp) => {
+const sendOtpEmail = async (toEmail, plainOtp, options = {}) => {
   if (!toEmail) return { success: false, error: 'Recipient email is required.' };
   if (!plainOtp) return { success: false, error: 'OTP is required.' };
+
+  const roleLabel = options.role === 'brand' ? 'Brand Owner' : 'Creator';
+  const titleText = options.title || `CollabX ${roleLabel} Verification Code`;
+  const subjectText = options.subject || `Verify Your Email Address - CollabX`;
+
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+
+  // Development Fallback: In development mode, log OTP directly to console and bypass real SMTP
+  if (isDev) {
+    console.log('\n======================================================');
+    console.log(`⚡ [DEV MODE - ${roleLabel.toUpperCase()} EMAIL VERIFICATION OTP]`);
+    console.log(`📧 Recipient Email: ${toEmail}`);
+    console.log(`🔑 6-Digit OTP:     ${plainOtp}`);
+    console.log('⏳ Expiry:          10 minutes');
+    console.log('💡 Note: Enter this OTP in the signup verification box.');
+    console.log('======================================================\n');
+
+    return {
+      success: true,
+      messageId: `dev-simulated-${Date.now()}`,
+      isDevFallback: true,
+      devOtp: plainOtp
+    };
+  }
 
   const transporter = createTransporter();
 
@@ -65,10 +89,10 @@ const sendOtpEmail = async (toEmail, plainOtp) => {
     const info = await transporter.sendMail({
       from: fromAddress,
       to: toEmail,
-      subject: 'Verify Your Email Address - CollabX',
-      text: `Welcome to CollabX!\n\nYour 6-digit verification code is: ${plainOtp}\n\nThis code will expire in 10 minutes.`,
+      subject: subjectText,
+      text: `Welcome to CollabX!\n\nYour 6-digit ${roleLabel} verification code is: ${plainOtp}\n\nThis code will expire in 10 minutes.`,
       html: `<div style="font-family: Arial, sans-serif; padding: 20px; max-width: 500px; border: 1px solid #e2e8f0; border-radius: 12px;">
-        <h2 style="color: #ec4899;">CollabX Verification Code</h2>
+        <h2 style="color: #ec4899;">${titleText}</h2>
         <p style="font-size: 14px; color: #334155;">Welcome to CollabX! Use the verification code below to complete your registration:</p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
           <span style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #0f172a;">${plainOtp}</span>

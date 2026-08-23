@@ -21,12 +21,15 @@ import {
   AlertTriangle,
   ArrowRight,
   UserCheck,
-  Sparkles
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
+import { formatRelativeTime } from '../../utils/dateTime';
+import { getNotificationRoute } from '../../utils/notificationRoutes';
 
 export const CreatorDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formatCurrency } = useApp();
+  const { formatCurrency, notifications, markNotificationRead } = useApp();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -271,40 +274,45 @@ export const CreatorDashboard: React.FC = () => {
             <Card className="lg:col-span-2 p-5 border-slate-200/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">Recent Invitations & Offers</h2>
-                  <p className="text-xs text-slate-500 mt-1">Direct briefs received from top brands.</p>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Notifications & Activity</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Latest briefs, counter offers, approvals, and payout updates.</p>
                 </div>
-                <Mail className="w-5 h-5 text-pink-500"/>
+                <Link to="/creator/notifications" className="text-xs font-bold text-purple-600 hover:underline flex items-center gap-1">
+                  View all <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
-              <div className="space-y-3 mt-4">
-                {(!dashboardData?.recentRequests || dashboardData.recentRequests.length === 0) ? (
-                  <p className="text-xs text-slate-400 py-4 text-center">No pending invitations currently.</p>
+              <div className="space-y-2.5 mt-4">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No recent notifications.</p>
                 ) : (
-                  dashboardData.recentRequests.map((req: any) => (
-                    <div key={req._id || req.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-900 block">{req.brandName}</span>
-                        <span className="text-slate-500 text-[11px]">{req.campaignTitle} — {formatCurrency(req.proposedPrice || 0)}</span>
-                      </div>
-                      {req.status === 'pending' && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleResponse(req._id || req.id, 'accepted')}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleResponse(req._id || req.id, 'rejected')}
-                            className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px] rounded-lg"
-                          >
-                            Decline
-                          </button>
+                  notifications.slice(0, 5).map((n: any) => {
+                    const isUnread = !n.read && !n.isRead;
+                    const nid = n._id || n.id;
+                    return (
+                      <Link
+                        key={nid}
+                        to={getNotificationRoute(n, 'creator')}
+                        onClick={() => markNotificationRead(nid)}
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                          isUnread
+                            ? 'bg-purple-50/50 border-purple-200 hover:bg-purple-50'
+                            : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isUnread && <span className="w-2 h-2 rounded-full bg-[#EC4899] shrink-0" />}
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-900 block truncate">{n.title || n.message}</span>
+                            <span className="text-slate-500 text-[11px] block truncate">{n.message}</span>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-3">
+                          {formatRelativeTime(n.createdAt || n.timestamp)}
+                        </span>
+                      </Link>
+                    );
+                  })
                 )}
               </div>
             </Card>

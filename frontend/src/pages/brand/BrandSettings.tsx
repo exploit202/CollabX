@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
-import { Bell, Lock, Globe, Save, Loader2, AlertCircle } from 'lucide-react';
+import { Bell, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { getBrandSettings, updateBrandSettings, changeBrandPassword } from '../../lib/api';
 
 interface NotificationSetting {
@@ -12,7 +12,7 @@ interface NotificationSetting {
 }
 
 export const BrandSettings: React.FC = () => {
-  const { addToast, setUserPreferences } = useApp();
+  const { addToast } = useApp();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -69,10 +69,6 @@ export const BrandSettings: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
-  // Preferences State (Canonical values)
-  const [timezone, setTimezone] = useState('Asia/Kolkata');
-  const [currency, setCurrency] = useState('INR');
-
   // Load Settings from Backend API on mount
   useEffect(() => {
     setLoading(true);
@@ -81,7 +77,7 @@ export const BrandSettings: React.FC = () => {
     getBrandSettings()
       .then((res) => {
         if (res?.success && res.data) {
-          const { notificationPreferences, preferences } = res.data;
+          const { notificationPreferences } = res.data;
 
           if (notificationPreferences) {
             setNotifications((prev) =>
@@ -94,17 +90,6 @@ export const BrandSettings: React.FC = () => {
               }))
             );
           }
-
-          if (preferences) {
-            const canonicalTz = preferences.timezone || 'Asia/Kolkata';
-            const canonicalCurr = preferences.currency || 'INR';
-            setTimezone(canonicalTz);
-            setCurrency(canonicalCurr);
-            setUserPreferences({
-              timezone: canonicalTz,
-              currency: canonicalCurr
-            });
-          }
         }
       })
       .catch((err) => {
@@ -116,10 +101,27 @@ export const BrandSettings: React.FC = () => {
       });
   }, []);
 
-  const toggleNotification = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item))
-    );
+  const toggleNotification = async (id: string) => {
+    const updated = notifications.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item));
+    setNotifications(updated);
+
+    const notifObj: Record<string, boolean> = {};
+    updated.forEach((n) => {
+      notifObj[n.id] = n.enabled;
+    });
+
+    try {
+      setIsSaving(true);
+      await updateBrandSettings({
+        notificationPreferences: notifObj
+      });
+      addToast('success', 'Notification preferences updated.');
+    } catch (err: any) {
+      console.error('Error saving notification settings:', err);
+      addToast('error', err?.data?.message || err?.message || 'Failed to update notification preference.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -166,40 +168,6 @@ export const BrandSettings: React.FC = () => {
     }
   };
 
-  const handleSavePreferences = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setErrorMsg(null);
-
-    const notifObj: Record<string, boolean> = {};
-    notifications.forEach((n) => {
-      notifObj[n.id] = n.enabled;
-    });
-
-    try {
-      const res = await updateBrandSettings({
-        notificationPreferences: notifObj,
-        preferences: {
-          timezone,
-          currency
-        }
-      });
-
-      if (res?.success) {
-        setUserPreferences({ timezone, currency });
-        addToast('success', 'Account & security preferences saved successfully.');
-      } else {
-        setErrorMsg(res?.message || 'Failed to save settings.');
-      }
-    } catch (err: any) {
-      console.error('Error saving brand settings:', err);
-      setErrorMsg(err?.data?.message || err?.message || 'Failed to save settings.');
-      addToast('error', err?.data?.message || err?.message || 'Failed to save settings.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center py-16">
@@ -223,7 +191,7 @@ export const BrandSettings: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSavePreferences} className="space-y-6">
+      <div className="space-y-6">
         {/* Section 1 — Notification Preferences */}
         <Card className="p-6 border-slate-200/90 shadow-xs space-y-5">
           <div>
@@ -324,62 +292,7 @@ export const BrandSettings: React.FC = () => {
             </div>
           </div>
         </Card>
-
-        {/* Section 3 — Preferences */}
-        <Card className="p-6 border-slate-200/90 shadow-xs space-y-5">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-emerald-600" />
-              Preferences
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Set your basic CollabX preferences.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Timezone</label>
-              <select
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-60"
-                disabled={isSaving}
-              >
-                <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                <option value="UTC">UTC</option>
-                <option value="America/New_York">America/New_York (EST)</option>
-                <option value="Europe/London">Europe/London (GMT)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-60"
-                disabled={isSaving}
-              >
-                <option value="INR">Indian Rupee (₹)</option>
-                <option value="USD">US Dollar ($)</option>
-                <option value="EUR">Euro (€)</option>
-                <option value="GBP">British Pound (£)</option>
-              </select>
-            </div>
-          </div>
-        </Card>
-
-        {/* Save Preferences Button */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="px-6 py-3 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Preferences
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };

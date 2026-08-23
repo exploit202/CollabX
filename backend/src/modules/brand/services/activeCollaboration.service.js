@@ -194,6 +194,20 @@ const completeCollaboration = async (collaborationId, userId) => {
       entityType: 'Collaboration',
       entityId: collaboration._id
     });
+
+    const agreedAmount = Number(collaboration.agreedBudget || collaboration.agreedPrice || 0);
+    const brandId = collaboration.brandId?._id || collaboration.brandId;
+    if (brandId) {
+      await notificationService.createNotification({
+        userId: brandId,
+        senderId: collaboration.creatorId?._id || collaboration.creatorId,
+        type: 'escrow_released',
+        title: 'Escrow Release Required',
+        message: `Collaboration completed. Release escrow payment of ₹${agreedAmount.toLocaleString('en-IN')}.`,
+        entityType: 'Collaboration',
+        entityId: collaboration._id
+      });
+    }
   } catch (err) {
     console.error('Notification error on collaboration completion:', err);
   }

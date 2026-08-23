@@ -219,7 +219,7 @@ const createReview = async (reviewerUserId, reviewerRole, { collaborationId, rat
     );
   }
 
-  // 9. Dispatch Review Received Notification
+  // 9. Dispatch Review Notifications
   try {
     const creatorNotifService = require('./creatorNotification.service');
     await creatorNotifService.createNotification({
@@ -227,7 +227,16 @@ const createReview = async (reviewerUserId, reviewerRole, { collaborationId, rat
       senderId: callerId,
       type: 'review_received',
       title: 'New Review Received',
-      message: `You received a ${numRating}-star review for your completed collaboration!`,
+      message: `You received a ${numRating}-star review for "${collaboration.campaignTitle || 'Campaign'}"!`,
+      entityType: 'Review',
+      entityId: newReview._id
+    });
+    await creatorNotifService.createNotification({
+      userId: callerId,
+      senderId: reviewedUserId,
+      type: 'review_submitted',
+      title: 'Review Submitted',
+      message: `You submitted a ${numRating}-star review for "${collaboration.campaignTitle || 'Campaign'}".`,
       entityType: 'Review',
       entityId: newReview._id
     });

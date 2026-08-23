@@ -28,12 +28,15 @@ import {
   Star,
   Users,
   Award,
-  Sparkles
+  Sparkles,
+  Bell
 } from 'lucide-react';
+import { formatRelativeTime } from '../../utils/dateTime';
+import { getNotificationRoute } from '../../utils/notificationRoutes';
 
 export const BrandDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formatCurrency } = useApp();
+  const { formatCurrency, notifications, markNotificationRead } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -187,16 +190,46 @@ export const BrandDashboard: React.FC = () => {
             <Card className="lg:col-span-2 p-5 border-slate-200/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">Quick Actions</h2>
-                  <p className="text-xs text-slate-500 mt-1">Move your next collaboration forward.</p>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Notifications & Activity</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Latest updates from your creators, campaigns, and escrow.</p>
                 </div>
-                <MessageSquare className="w-5 h-5 text-pink-500"/>
+                <Link to="/brand/notifications" className="text-xs font-bold text-[#EC4899] hover:underline flex items-center gap-1">
+                  View all <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-                <button onClick={() => setShowCreateModal(true)} className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Create campaign</button>
-                <Link to="/brand/discover" className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Find creators</Link>
-                <Link to="/brand/collaborations" className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Active collabs</Link>
-                <Link to="/brand/saved-creators" className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Shortlisted</Link>
+
+              <div className="space-y-2.5 mt-4">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No recent notifications.</p>
+                ) : (
+                  notifications.slice(0, 5).map((n: any) => {
+                    const isUnread = !n.read && !n.isRead;
+                    const nid = n._id || n.id;
+                    return (
+                      <Link
+                        key={nid}
+                        to={getNotificationRoute(n, 'brand')}
+                        onClick={() => markNotificationRead(nid)}
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                          isUnread
+                            ? 'bg-pink-50/50 border-pink-200 hover:bg-pink-50'
+                            : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isUnread && <span className="w-2 h-2 rounded-full bg-[#EC4899] shrink-0" />}
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-900 block truncate">{n.title || n.message}</span>
+                            <span className="text-slate-500 text-[11px] block truncate">{n.message}</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-3">
+                          {formatRelativeTime(n.createdAt || n.timestamp)}
+                        </span>
+                      </Link>
+                    );
+                  })
+                )}
               </div>
             </Card>
 
