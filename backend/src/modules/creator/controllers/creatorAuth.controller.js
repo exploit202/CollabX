@@ -124,7 +124,8 @@ const requestEmailOtp = async (req, res, next) => {
 
     return successResponse(res, 200, `OTP sent successfully to ${userEmail}.`, {
       emailSent: true,
-      recipientEmail: userEmail
+      recipientEmail: userEmail,
+      ...(emailResult.devOtp && { devOtp: emailResult.devOtp })
     });
   } catch (error) {
     next(error);

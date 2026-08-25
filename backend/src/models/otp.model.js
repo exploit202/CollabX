@@ -27,6 +27,13 @@ const otpSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Attempts cannot be negative']
     },
+    purpose: {
+      type: String,
+      enum: ['email_verification', 'password_reset'],
+      default: 'email_verification',
+      required: true,
+      index: true
+    },
     lastSentAt: {
       type: Date,
       default: Date.now
@@ -37,6 +44,8 @@ const otpSchema = new mongoose.Schema(
     }
   }
 );
+
+otpSchema.index({ userId: 1, purpose: 1 });
 
 const Otp = mongoose.models.Otp || mongoose.model('Otp', otpSchema);
 

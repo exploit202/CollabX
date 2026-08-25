@@ -39,6 +39,49 @@ const verifyAccessToken = (token) => {
 };
 
 /**
+ * Generate a short-lived Password Reset Authorization Token (15m).
+ * @param {object} payload - { userId, email }
+ * @returns {string} Signed token
+ */
+const generatePasswordResetToken = (payload) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is missing from environmental configuration.');
+  }
+
+  const plainPayload = payload && typeof payload.toObject === 'function' ? payload.toObject() : payload;
+  const tokenPayload = {
+    userId: plainPayload.userId || plainPayload._id || plainPayload.id,
+    email: plainPayload.email,
+    purpose: 'password_reset_auth'
+  };
+
+  return jwt.sign(tokenPayload, secret, { expiresIn: '15m' });
+};
+
+/**
+ * Verify a Password Reset Authorization Token.
+ * @param {string} token
+ * @returns {object} Decoded payload
+ */
+const verifyPasswordResetToken = (token) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is missing from environmental configuration.');
+  }
+
+  const decoded = jwt.verify(token, secret);
+  if (decoded.purpose !== 'password_reset_auth') {
+    const error = new Error('Invalid password reset token purpose.');
+    error.statusCode = 401;
+    error.code = 'INVALID_RESET_TOKEN';
+    throw error;
+  }
+
+  return decoded;
+};
+
+/**
  * Helper to convert relative expiration strings to milliseconds.
  * @param {string} expiresIn
  * @returns {number}
@@ -73,5 +116,7 @@ module.exports = {
   generateAccessToken,
   verifyAccessToken,
   generateToken: generateAccessToken,
+  generatePasswordResetToken,
+  verifyPasswordResetToken,
   parseExpiresInToMs,
 };

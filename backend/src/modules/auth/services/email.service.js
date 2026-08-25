@@ -52,16 +52,24 @@ const sendOtpEmail = async (toEmail, plainOtp, options = {}) => {
   if (!toEmail) return { success: false, error: 'Recipient email is required.' };
   if (!plainOtp) return { success: false, error: 'OTP is required.' };
 
-  const roleLabel = options.role === 'brand' ? 'Brand Owner' : 'Creator';
-  const titleText = options.title || `CollabX ${roleLabel} Verification Code`;
-  const subjectText = options.subject || `Verify Your Email Address - CollabX`;
+  const isPasswordReset = options.purpose === 'password_reset' || options.isPasswordReset === true;
+  const roleLabel = options.role === 'brand' ? 'Brand Owner' : options.role === 'creator' ? 'Creator' : 'Account';
+  
+  const titleText = options.title || (isPasswordReset ? 'CollabX Password Reset' : `CollabX ${roleLabel} Verification Code`);
+  const subjectText = options.subject || (isPasswordReset ? 'Password Reset Verification Code - CollabX' : `Verify Your Email Address - CollabX`);
+  const bodyIntro = isPasswordReset
+    ? 'Use the verification code below to reset your CollabX account password:'
+    : 'Welcome to CollabX! Use the verification code below to complete your registration:';
+  const securityNote = isPasswordReset
+    ? 'If you did not request a password reset, please ignore this email. Never share this code with anyone.'
+    : 'This code will expire in 10 minutes. If you did not request this, please ignore this email.';
 
   const transporter = createTransporter();
 
   // If SMTP is explicitly set to force simulation (e.g. offline unit test runner without internet)
   if (!transporter || process.env.FORCE_DEV_OTP_SIMULATION === 'true') {
     console.log('\n======================================================');
-    console.log(`⚡ [FALLBACK MODE - ${roleLabel.toUpperCase()} EMAIL VERIFICATION OTP]`);
+    console.log(`⚡ [FALLBACK MODE - ${isPasswordReset ? 'PASSWORD RESET' : roleLabel.toUpperCase()} OTP]`);
     console.log(`📧 Recipient Email: ${toEmail}`);
     console.log(`🔑 6-Digit OTP:     ${plainOtp}`);
     console.log('⏳ Expiry:          10 minutes');
@@ -82,14 +90,14 @@ const sendOtpEmail = async (toEmail, plainOtp, options = {}) => {
       from: fromAddress,
       to: toEmail,
       subject: subjectText,
-      text: `Welcome to CollabX!\n\nYour 6-digit ${roleLabel} verification code is: ${plainOtp}\n\nThis code will expire in 10 minutes.`,
+      text: `${titleText}\n\nYour 6-digit verification code is: ${plainOtp}\n\n${securityNote}`,
       html: `<div style="font-family: Arial, sans-serif; padding: 20px; max-width: 500px; border: 1px solid #e2e8f0; border-radius: 12px;">
         <h2 style="color: #ec4899;">${titleText}</h2>
-        <p style="font-size: 14px; color: #334155;">Welcome to CollabX! Use the verification code below to complete your registration:</p>
+        <p style="font-size: 14px; color: #334155;">${bodyIntro}</p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
           <span style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #0f172a;">${plainOtp}</span>
         </div>
-        <p style="font-size: 12px; color: #64748b;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+        <p style="font-size: 12px; color: #64748b;">${securityNote}</p>
       </div>`
     });
 
