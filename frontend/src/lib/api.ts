@@ -494,3 +494,71 @@ export const uploadBrandProfileImage = (file: File) => {
     body: formData
   });
 };
+
+// ====================================================
+// FORGOT PASSWORD API INTEGRATION
+// ====================================================
+
+export interface ForgotPasswordSendOtpRequest {
+  email: string;
+}
+
+export interface ForgotPasswordSendOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    emailSent: boolean;
+    message?: string;
+    devOtp?: string;
+  };
+}
+
+export interface ForgotPasswordVerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ForgotPasswordVerifyOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    verified: boolean;
+    resetToken: string;
+    email: string;
+  };
+}
+
+export interface ResetPasswordRequest {
+  password: string;
+  resetToken?: string;
+  email?: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    success: boolean;
+  };
+}
+
+export const sendForgotPasswordOtp = (email: string) =>
+  request<ForgotPasswordSendOtpResponse>('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+
+export const verifyForgotPasswordOtp = (email: string, otp: string) =>
+  request<ForgotPasswordVerifyOtpResponse>('/api/auth/forgot-password/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp })
+  });
+
+export const resetForgottenPassword = (password: string, resetToken: string, email?: string) =>
+  request<ResetPasswordResponse>('/api/auth/reset-password', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resetToken}`
+    },
+    body: JSON.stringify({ password, resetToken, email })
+  });

@@ -7,6 +7,8 @@ import { OtpInput } from '../../components/common/OtpInput';
 import { StepProgress } from '../../components/common/StepProgress';
 import { useApp } from '../../context/AppContext';
 
+import { sendForgotPasswordOtp, verifyForgotPasswordOtp } from '../../lib/api';
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STEPS = ['Enter Email', 'Verify Code'];
 
@@ -33,40 +35,79 @@ export const ForgotPasswordPage: React.FC = () => {
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
-    if (!email.trim()) {
+    const targetEmail = email.trim();
+    if (!targetEmail) {
       setEmailError('Email is required');
       return;
     }
-    if (!EMAIL_RE.test(email)) {
+    if (!EMAIL_RE.test(targetEmail)) {
       setEmailError('Enter a valid email address');
       return;
     }
+
     setIsSendingLink(true);
-    // Placeholder for real "send OTP" call - backend integration pending.
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsSendingLink(false);
-    setStep(1);
-    addToast('success', 'Verification Code Sent', `We sent a 6-digit code to ${email}`);
+    try {
+      const response = await sendForgotPasswordOtp(targetEmail);
+      setIsSendingLink(false);
+      setStep(1);
+      setResendCooldown(30);
+      addToast(
+        'success',
+        'Verification Code Sent',
+        response.message || `If an account exists for ${targetEmail}, a 6-digit code has been sent.`
+      );
+    } catch (err: any) {
+      setIsSendingLink(false);
+      const msg = err.message || 'Failed to send verification code. Please check your internet connection.';
+      setEmailError(msg);
+      addToast('error', 'Failed to Send Code', msg);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (resendCooldown > 0) return;
-    setResendCooldown(30);
-    addToast('info', 'Code Resent', `A new code was sent to ${email}`);
+    const targetEmail = email.trim();
+    setOtpError('');
+    try {
+      const response = await sendForgotPasswordOtp(targetEmail);
+      setResendCooldown(30);
+      addToast(
+        'info',
+        'Code Resent',
+        response.message || `A new code was sent to ${targetEmail}`
+      );
+    } catch (err: any) {
+      const msg = err.message || 'Failed to resend verification code.';
+      setOtpError(msg);
+      addToast('error', 'Resend Failed', msg);
+    }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     setOtpError('');
-    if (otp.length !== 6) {
+    if (otp.trim().length !== 6) {
       setOtpError('Enter the complete 6-digit code');
       return;
     }
+
     setIsVerifying(true);
-    // Mock OTP check - UI only. Any complete 6-digit code is accepted.
-    setTimeout(() => {
+    try {
+      const response = await verifyForgotPasswordOtp(email.trim(), otp.trim());
       setIsVerifying(false);
-      navigate('/reset-password', { state: { email } });
-    }, 800);
+
+      const resetToken = response.data?.resetToken;
+      if (!resetToken) {
+        throw new Error('Verification succeeded but reset token was not returned by server.');
+      }
+
+      addToast('success', 'Code Verified', 'Verification code confirmed. Please choose a new password.');
+      navigate('/reset-password', { state: { email: email.trim(), resetToken } });
+    } catch (err: any) {
+      setIsVerifying(false);
+      const msg = err.message || 'Invalid or expired verification code.';
+      setOtpError(msg);
+      addToast('error', 'Verification Failed', msg);
+    }
   };
 
   return (
