@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://collabx-m8l3.onrender.com/api/:path*" }
+  ]
+}
