@@ -1,6 +1,0 @@
-{
-  "name": "CollabX",
-  "description": "Centralized SaaS platform connecting Brands and Content Creators for influencer marketing and brand collaborations.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
