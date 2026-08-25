@@ -22,7 +22,7 @@ export const setToken = (token: string | null): void => {
 export const request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const token = getToken();
   const headers: Record<string, string> = {
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string> || {})
   };
 
@@ -65,7 +65,7 @@ export const request = async <T>(path: string, options: RequestInit = {}): Promi
 // AUTHENTICATION APIS
 // ==========================================
 export const registerBrand = (data: any) =>
-  request<{ success: boolean; data: { token: string; user: any; profile: any } }>(
+  request<{ success: boolean; data: { token: string; signupToken?: string; user: any; profile: any } }>(
     '/api/brand/auth/register',
     { method: 'POST', body: JSON.stringify(data) }
   );
@@ -77,7 +77,7 @@ export const loginBrand = (data: any) =>
   );
 
 export const registerCreator = (data: any) =>
-  request<{ success: boolean; data: { token: string; user: any; profile: any } }>(
+  request<{ success: boolean; data: { token: string; signupToken?: string; user: any; profile: any } }>(
     '/api/creator/auth/register',
     { method: 'POST', body: JSON.stringify(data) }
   );
@@ -101,7 +101,7 @@ export const verifyCreatorPlatformUrl = (platform: string, url: string) =>
   });
 
 export const requestCreatorOtp = () =>
-  request<{ success: boolean; message: string; data?: { emailSent: boolean; recipientEmail: string } }>(
+  request<{ success: boolean; message: string; data?: { emailSent: boolean; recipientEmail: string; devOtp?: string } }>(
     '/api/creator/auth/otp/send',
     { method: 'POST' }
   );
@@ -109,6 +109,18 @@ export const requestCreatorOtp = () =>
 export const verifyCreatorOtp = (otp: string) =>
   request<{ success: boolean; message: string; data: { user: any; token: string } }>(
     '/api/creator/auth/otp/verify',
+    { method: 'POST', body: JSON.stringify({ otp }) }
+  );
+
+export const requestBrandOtp = () =>
+  request<{ success: boolean; message: string; data?: { emailSent: boolean; recipientEmail: string; devOtp?: string } }>(
+    '/api/brand/auth/otp/send',
+    { method: 'POST' }
+  );
+
+export const verifyBrandOtp = (otp: string) =>
+  request<{ success: boolean; message: string; data: { user: any; token: string } }>(
+    '/api/brand/auth/otp/verify',
     { method: 'POST', body: JSON.stringify({ otp }) }
   );
 
@@ -138,6 +150,12 @@ export const createCampaign = (data: any) =>
 
 export const getCampaignById = (id: string) =>
   request<{ success: boolean; data: any }>(`/api/brand/campaigns/${id}`);
+
+export const updateCampaignStatusApi = (id: string, status: string) =>
+  request<{ success: boolean; data: any }>(`/api/brand/campaigns/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
 
 export const getSavedCreators = () =>
   request<{ success: boolean; data: any[] }>('/api/brand/saved-creators');
@@ -224,6 +242,11 @@ export const getBrandNotifications = () =>
 
 export const markBrandNotificationRead = (id: string) =>
   request<{ success: boolean; data: any }>(`/api/brand/notifications/${id}/read`, {
+    method: 'PATCH'
+  });
+
+export const markAllBrandNotificationsRead = () =>
+  request<{ success: boolean }>('/api/brand/notifications/read-all', {
     method: 'PATCH'
   });
 
@@ -341,6 +364,11 @@ export const markCreatorNotificationRead = (id: string) =>
     method: 'PATCH'
   });
 
+export const markAllCreatorNotificationsRead = () =>
+  request<{ success: boolean }>('/api/creator/notifications/read-all', {
+    method: 'PATCH'
+  });
+
 export const getPortfolio = () =>
   request<{ success: boolean; data: any[] }>('/api/creator/portfolio');
 
@@ -387,22 +415,37 @@ export const updatePayoutAccount = (data: any) =>
     body: JSON.stringify(data)
   });
 
-export const initiateEscrowPayment = (data: { collaborationId: string; amount?: number; currency?: string }) =>
-  request<{ success: boolean; data: any }>('/api/brand/payments/escrow', {
+export const fundEscrow = (data: { collaborationId: string; amount?: number; currency?: string }) =>
+  request<{ success: boolean; message: string; data: any }>('/api/payments/fund', {
     method: 'POST',
     body: JSON.stringify(data)
   });
 
-export const releaseEscrowPayment = (paymentId: string) =>
-  request<{ success: boolean; data: any }>(`/api/brand/payments/${paymentId}/release`, {
-    method: 'PATCH'
+export const releaseEscrow = (data: { collaborationId?: string; paymentId?: string; escrowId?: string }) =>
+  request<{ success: boolean; message: string; data: any }>('/api/payments/release', {
+    method: 'POST',
+    body: JSON.stringify(data)
   });
 
+export const getPayments = (params?: { collaborationId?: string; status?: string }) => {
+  const query = new URLSearchParams();
+  if (params?.collaborationId) query.set('collaborationId', params.collaborationId);
+  if (params?.status) query.set('status', params.status);
+  const qStr = query.toString();
+  return request<{ success: boolean; data: any[] }>(`/api/payments${qStr ? `?${qStr}` : ''}`);
+};
+
+export const initiateEscrowPayment = (data: { collaborationId: string; amount?: number; currency?: string }) =>
+  fundEscrow(data);
+
+export const releaseEscrowPayment = (paymentId: string, collaborationId?: string) =>
+  releaseEscrow({ paymentId, collaborationId });
+
 export const getBrandPayments = () =>
-  request<{ success: boolean; data: any[] }>('/api/brand/payments/brand');
+  getPayments();
 
 export const getCreatorPayments = () =>
-  request<{ success: boolean; data: any[] }>('/api/creator/payments/creator');
+  getPayments();
 
 export const getBrandAnalytics = () =>
   request<{ success: boolean; data: any }>('/api/brand/analytics');
@@ -415,3 +458,107 @@ export const getBrandCollaborationActivity = (id: string) =>
 
 export const getCreatorCollaborationActivity = (id: string) =>
   request<{ success: boolean; collaborationId: string; activities: any[] }>(`/api/creator/collaborations/${id}/activity`);
+
+export const loginAdmin = (data:any) => request<any>('/api/auth/login',{method:'POST',body:JSON.stringify({...data,role:'admin'})});
+export const getCurrentUser = () => request<any>('/api/auth/me');
+export const reportBrand = (data: { reportedAgainst: string; reason: string; description?: string }) =>
+  request<any>('/api/creator/reports', { method: 'POST', body: JSON.stringify(data) });
+
+export const reportCreator = (data: { reportedAgainst: string; reason: string; description?: string }) =>
+  request<any>('/api/brand/reports', { method: 'POST', body: JSON.stringify(data) });
+
+export const getAdminDashboard = () => request<any>('/api/admin/dashboard');
+export const getAdminUsers = (p?:any) => {const q=new URLSearchParams();if(p?.role)q.set('role',p.role);if(p?.search)q.set('search',p.search);return request<any>(`/api/admin/users${q.toString()?`?${q}`:''}`)};
+export const updateAdminUserStatus=(id:string,isActive:boolean)=>request<any>(`/api/admin/users/${id}/status`,{method:'PATCH',body:JSON.stringify({isActive})});
+export const updateAdminUserVerification=(id:string,isVerified:boolean)=>request<any>(`/api/admin/users/${id}/verification`,{method:'PATCH',body:JSON.stringify({isVerified})});
+export const getAdminCampaigns=()=>request<any>('/api/admin/campaigns');export const moderateAdminCampaign=(id:string,action:string,note='')=>request<any>(`/api/admin/campaigns/${id}/moderation`,{method:'PATCH',body:JSON.stringify({action,note})});
+export const getAdminCollaborations=()=>request<any>('/api/admin/collaborations');export const getAdminReports=()=>request<any>('/api/admin/reports');export const updateAdminReportStatus=(id:string,status:string)=>request<any>(`/api/admin/reports/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});export const getAdminSettings=()=>request<any>('/api/admin/settings');export const updateAdminSettings=(data:any)=>request<any>('/api/admin/settings',{method:'PATCH',body:JSON.stringify(data)});
+export const getAdminNotifications = () => request<{ success: boolean; data: any[] }>('/api/admin/notifications');
+export const markAdminNotificationRead = (id: string) => request<{ success: boolean; data: any }>(`/api/admin/notifications/${id}/read`, { method: 'PATCH' });
+export const markAllAdminNotificationsRead = () => request<{ success: boolean }>('/api/admin/notifications/read-all', { method: 'PATCH' });
+
+export const uploadCreatorProfileImage = (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  return request<any>('/api/creator/profile/avatar', {
+    method: 'POST',
+    body: formData
+  });
+};
+
+export const uploadBrandProfileImage = (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  return request<any>('/api/brand/profile/avatar', {
+    method: 'POST',
+    body: formData
+  });
+};
+
+// ====================================================
+// FORGOT PASSWORD API INTEGRATION
+// ====================================================
+
+export interface ForgotPasswordSendOtpRequest {
+  email: string;
+}
+
+export interface ForgotPasswordSendOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    emailSent: boolean;
+    message?: string;
+    devOtp?: string;
+  };
+}
+
+export interface ForgotPasswordVerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ForgotPasswordVerifyOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    verified: boolean;
+    resetToken: string;
+    email: string;
+  };
+}
+
+export interface ResetPasswordRequest {
+  password: string;
+  resetToken?: string;
+  email?: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    success: boolean;
+  };
+}
+
+export const sendForgotPasswordOtp = (email: string) =>
+  request<ForgotPasswordSendOtpResponse>('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+
+export const verifyForgotPasswordOtp = (email: string, otp: string) =>
+  request<ForgotPasswordVerifyOtpResponse>('/api/auth/forgot-password/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp })
+  });
+
+export const resetForgottenPassword = (password: string, resetToken: string, email?: string) =>
+  request<ResetPasswordResponse>('/api/auth/reset-password', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resetToken}`
+    },
+    body: JSON.stringify({ password, resetToken, email })
+  });

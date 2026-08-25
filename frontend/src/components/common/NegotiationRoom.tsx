@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, Send, ShieldCheck, Loader2 } from 'lucide-react';
+import { Check, Send, ShieldCheck, Loader2, Flag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Badge } from './Badge';
 import { Card } from './Card';
+import { Avatar } from './Avatar';
+import { ReportUserModal } from '../modals/ReportUserModal';
 import {
   getCreatorNegotiations,
   getBrandNegotiations,
   sendCreatorCounterOffer,
   sendBrandOffer,
   acceptCreatorOffer,
-  acceptBrandOffer
+  acceptBrandOffer,
+  reportBrand,
+  reportCreator
 } from '../../lib/api';
 
 type Role = 'brand' | 'creator';
@@ -19,7 +23,7 @@ const badge = (s: string) => (s === 'agreed' ? 'emerald' : s === 'rejected' || s
 
 export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
   const { user } = useAuth();
-  const { formatCurrency, formatDateTime } = useApp();
+  const { formatCurrency, formatDateTime, refreshAppData, addToast } = useApp();
   const [searchParams] = useSearchParams();
   const targetIdParam = searchParams.get('id') || searchParams.get('invitationId');
 
@@ -31,6 +35,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string; role: 'brand' | 'creator' } | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   const fetchNegotiations = async () => {
@@ -119,6 +124,16 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
     return n.brandName || n.brandId?.fullName || 'Brand';
   };
 
+  const partnerAvatar = (n: any) => {
+    if (!n) return null;
+    if (role === 'brand') {
+      const img = n.creatorAvatar || n.creatorId?.profileImage?.url || n.creatorId?.profileImage;
+      return typeof img === 'object' ? img?.url : img || null;
+    }
+    const img = n.brandLogo || n.brandId?.profileImage?.url || n.brandId?.profileImage || n.brandId?.companyLogo;
+    return typeof img === 'object' ? img?.url : img || null;
+  };
+
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!current || price <= 0) return;
@@ -128,8 +143,8 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
       const payload = {
         proposedPrice: price,
         proposedBudget: price,
-        notes: notes || `Counter offer submitted for $${price}.`,
-        message: notes || `Counter offer submitted for $${price}.`
+        notes: notes || `Counter offer submitted for ${formatCurrency(price)}.`,
+        message: notes || `Counter offer submitted for ${formatCurrency(price)}.`
       };
 
       if (role === 'creator') {
@@ -140,6 +155,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
 
       setNotes('');
       fetchNegotiations();
+      refreshAppData();
     } catch (err) {
       console.error('Failed to send counter offer:', err);
     } finally {
@@ -161,6 +177,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
       }
 
       fetchNegotiations();
+      refreshAppData();
     } catch (err) {
       console.error('Failed to accept offer:', err);
     } finally {
@@ -217,9 +234,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-xs shrink-0">
-                        {partnerName(n)?.[0] || 'P'}
-                      </div>
+                      <Avatar src={partnerAvatar(n)} name={partnerName(n)} size="w-9 h-9" textSize="text-xs" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-slate-900 truncate">{partnerName(n)}</p>
                         <p className="text-[10px] text-slate-500 truncate">{n.campaignName || n.campaignTitle || 'Campaign'}</p>
@@ -241,11 +256,24 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
               <>
                 <div className="p-4 bg-slate-50 border-b flex justify-between items-center gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-sm">
-                      {partnerName(current)?.[0] || 'P'}
-                    </div>
+                    <Avatar src={partnerAvatar(current)} name={partnerName(current)} size="w-10 h-10" textSize="text-sm" />
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{partnerName(current)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-slate-900">{partnerName(current)}</p>
+                        <button
+                          onClick={() => setReportTarget({
+                            id: role === 'brand'
+                              ? String(current.creatorId?._id || current.creatorId)
+                              : String(current.brandId?._id || current.brandId),
+                            name: partnerName(current),
+                            role: role === 'brand' ? 'creator' : 'brand'
+                          })}
+                          className="p-1 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-colors"
+                          title={role === 'brand' ? 'Report Creator' : 'Report Brand'}
+                        >
+                          <Flag className="w-3 h-3" />
+                        </button>
+                      </div>
                       <p className="text-[10px] text-slate-500">{current.campaignName || current.campaignTitle}</p>
                     </div>
                   </div>
@@ -319,7 +347,7 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
                           ) : (
                             <Check className="w-4 h-4" />
                           )}
-                          Accept ${latestOfferPrice}
+                          Accept {formatCurrency(latestOfferPrice)}
                         </button>
                       )}
 
@@ -360,6 +388,27 @@ export const NegotiationRoom: React.FC<{ role: Role }> = ({ role }) => {
             )}
           </Card>
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole={reportTarget.role}
+          onSubmit={async (data) => {
+            try {
+              if (reportTarget.role === 'creator') {
+                await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              } else {
+                await reportBrand({ reportedAgainst: reportTarget.id, ...data });
+              }
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
+          }}
+        />
       )}
     </div>
   );

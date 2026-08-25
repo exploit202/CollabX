@@ -35,9 +35,9 @@ const registerBrand = async (registrationData) => {
     email,
     password: hashedPassword,
     role: 'brand',
-    isVerified: true,
+    isVerified: false,
     isActive: true,
-    registrationStatus: 'completed'
+    registrationStatus: 'pending'
   });
 
   await BrandProfile.create({
@@ -48,6 +48,33 @@ const registerBrand = async (registrationData) => {
   });
 
   const safeUser = newUser.toObject();
+  delete safeUser.password;
+  safeUser.userId = newUser._id;
+  return safeUser;
+};
+
+const markRegistrationCompleted = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error('User not found');
+    error.statusCode = 404;
+    error.code = 'USER_NOT_FOUND';
+    throw error;
+  }
+
+  if (user.role !== 'brand') {
+    const error = new Error('Only brand owner accounts can complete registration');
+    error.statusCode = 403;
+    error.code = 'INVALID_USER_ROLE';
+    throw error;
+  }
+
+  user.isVerified = true;
+  user.registrationStatus = 'completed';
+  await user.save();
+
+  const safeUser = user.toObject();
   delete safeUser.password;
   return safeUser;
 };
@@ -99,5 +126,6 @@ const loginBrand = async (loginData) => {
 
 module.exports = {
   registerBrand,
+  markRegistrationCompleted,
   loginBrand
 };

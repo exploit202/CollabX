@@ -30,18 +30,24 @@ export interface DeliverablePricing {
 
 export interface PortfolioItem {
   id: string;
+  _id?: string;
   title: string;
   brandName?: string;
   brandLogo?: string;
-  category: string;
-  mediaType: 'image' | 'video';
+  category?: string;
+  platform?: 'youtube' | 'instagram' | 'shorts-reels' | 'other' | string;
+  mediaType?: 'image' | 'video' | string;
   thumbnail: string;
+  contentUrl?: string;
   mediaUrl?: string;
-  views?: string;
-  likes?: string;
-  comments?: string;
+  campaignValue?: number;
+  views?: string | number;
+  engagementRate?: string | number;
+  likes?: string | number;
+  comments?: string | number;
   description: string;
-  date: string;
+  date?: string;
+  createdAt?: string;
 }
 
 export interface Review {

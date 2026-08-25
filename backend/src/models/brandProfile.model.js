@@ -78,6 +78,16 @@ const brandProfileSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    profileImage: {
+      url: {
+        type: String,
+        default: null
+      },
+      publicId: {
+        type: String,
+        default: null
+      }
+    },
     website: {
       type: String,
       trim: true,

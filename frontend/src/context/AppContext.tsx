@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './AuthContext';
 import {
   CreatorProfile,
   BrandProfile,
@@ -16,15 +17,30 @@ import {
   mockCreators,
   mockBrands,
   mockCampaigns,
-  mockInvitations,
-  mockNegotiations,
-  mockCollaborations,
-  mockNotifications,
   mockReports,
 } from '../data/mockData';
 import { formatCurrency as utilsFormatCurrency, convertCurrency as utilsConvertCurrency } from '../utils/currency';
 import { formatDate as utilsFormatDate, formatDateTime as utilsFormatDateTime } from '../utils/dateTime';
-import { getBrandSettings } from '../lib/api';
+import {
+  getToken,
+  getBrandSettings,
+  getCreatorNotifications,
+  markCreatorNotificationRead,
+  markAllCreatorNotificationsRead,
+  getBrandNotifications,
+  markBrandNotificationRead,
+  markAllBrandNotificationsRead,
+  getCreatorRequests,
+  getCreatorNegotiations,
+  getBrandInvitations,
+  getBrandNegotiations,
+  getSavedCreators,
+  saveCreator,
+  removeSavedCreator,
+  getAdminNotifications,
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead
+} from '../lib/api';
 
 export interface Toast {
   id: string;
@@ -59,6 +75,9 @@ interface AppContextType {
   formatDate: (date: string | Date | number | null) => string;
   formatDateTime: (date: string | Date | number | null) => string;
 
+  // Synchronization
+  refreshAppData: () => Promise<void>;
+
   // Actions
   addToast: (type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => void;
   removeToast: (id: string) => void;
@@ -76,11 +95,6 @@ interface AppContextType {
   updateCampaign: (campaignId: string, updates: Partial<Campaign>) => void;
   deleteCampaign: (campaignId: string) => void;
 
-  submitContentDeliverable: (collaborationId: string, url: string, notes: string) => void;
-  approveDeliverable: (collaborationId: string, feedback: string) => void;
-  addCreatorReview: (creatorId: string, review: Omit<Review, 'id' | 'date'>) => void;
-
-  addPortfolioItem: (creatorId: string, item: Omit<PortfolioItem, 'id' | 'date'>) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
 }
@@ -88,14 +102,17 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role, token: authToken, isGuest } = useAuth();
+  const token = authToken || getToken();
+
   const [creators, setCreators] = useState<CreatorProfile[]>(mockCreators);
   const [brands, setBrands] = useState<BrandProfile[]>(mockBrands);
   const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
-  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>(['creator-1', 'creator-3']);
-  const [invitations, setInvitations] = useState<Invitation[]>(mockInvitations);
-  const [negotiations, setNegotiations] = useState<Negotiation[]>(mockNegotiations);
-  const [collaborations, setCollaborations] = useState<Collaboration[]>(mockCollaborations);
-  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
+  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
+  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [reports, setReports] = useState<PlatformReport[]>(mockReports);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
@@ -103,8 +120,159 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currency: 'INR'
   });
 
+  const isFetchingRef = useRef<boolean>(false);
+  const knownNotifIdsRef = useRef<Set<string>>(new Set());
+  const isInitializedRef = useRef<boolean>(false);
+
+  // Reset tracking on user switch or logout
+  useEffect(() => {
+    isInitializedRef.current = false;
+    knownNotifIdsRef.current = new Set();
+  }, [token, role]);
+
+  const addToast = useCallback((type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => {
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 4);
+    setToasts((prev) => [...prev, { id, type, title, message, actionLabel, onAction }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }, []);
+
+  const handleInboundNotifAlerts = useCallback((newNotifs: any[]) => {
+    if (!Array.isArray(newNotifs)) return;
+
+    if (!isInitializedRef.current) {
+      newNotifs.forEach((n) => {
+        const nId = String(n._id || n.id);
+        if (nId) knownNotifIdsRef.current.add(nId);
+      });
+      isInitializedRef.current = true;
+      return;
+    }
+
+    // Process new incoming notifications
+    newNotifs.forEach((n) => {
+      const nId = String(n._id || n.id);
+      const isUnread = !n.read && !n.isRead;
+      if (nId && isUnread && !knownNotifIdsRef.current.has(nId)) {
+        knownNotifIdsRef.current.add(nId);
+        addToast('info', n.title || 'New Notification', n.message || '');
+      } else if (nId) {
+        knownNotifIdsRef.current.add(nId);
+      }
+    });
+  }, [addToast]);
+
+  const refreshAppData = useCallback(async () => {
+    const activeToken = getToken() || token;
+    if (!activeToken || isGuest || isFetchingRef.current) {
+      if (!activeToken || isGuest) {
+        setNotifications([]);
+        setInvitations([]);
+        setNegotiations([]);
+      }
+      return;
+    }
+
+    isFetchingRef.current = true;
+
+    try {
+      if (role === 'creator') {
+        const [notifRes, reqRes, negRes] = await Promise.all([
+          getCreatorNotifications().catch(() => null),
+          getCreatorRequests().catch(() => null),
+          getCreatorNegotiations().catch(() => null)
+        ]);
+
+        if (notifRes?.success && Array.isArray(notifRes.data)) {
+          setNotifications(notifRes.data);
+          handleInboundNotifAlerts(notifRes.data);
+        }
+        if (reqRes?.success && Array.isArray(reqRes.data)) {
+          setInvitations(reqRes.data);
+        }
+        if (negRes?.success && Array.isArray(negRes.data)) {
+          setNegotiations(negRes.data);
+        }
+      } else if (role === 'brand') {
+        const [notifRes, invRes, negRes, savedRes] = await Promise.all([
+          getBrandNotifications().catch(() => null),
+          getBrandInvitations().catch(() => null),
+          getBrandNegotiations().catch(() => null),
+          getSavedCreators().catch(() => null)
+        ]);
+
+        if (notifRes?.success && Array.isArray(notifRes.data)) {
+          setNotifications(notifRes.data);
+          handleInboundNotifAlerts(notifRes.data);
+        }
+        if (invRes?.success && Array.isArray(invRes.data)) {
+          setInvitations(invRes.data);
+        }
+        if (negRes?.success && Array.isArray(negRes.data)) {
+          setNegotiations(negRes.data);
+        }
+        if (savedRes?.success && Array.isArray(savedRes.data)) {
+          const idsSet = new Set<string>();
+          savedRes.data.forEach((item: any) => {
+            const creator = item.creatorId || item;
+            if (creator._id) idsSet.add(String(creator._id));
+            if (creator.id) idsSet.add(String(creator.id));
+            if (creator.userId?._id) idsSet.add(String(creator.userId._id));
+            if (creator.userId?.id) idsSet.add(String(creator.userId.id));
+            if (typeof creator.userId === 'string') idsSet.add(creator.userId);
+            if (item._id) idsSet.add(String(item._id));
+          });
+          setSavedCreatorIds(Array.from(idsSet));
+        }
+      } else if (role === 'admin') {
+        const notifRes = await getAdminNotifications().catch(() => null);
+        if (notifRes?.success && Array.isArray(notifRes.data)) {
+          setNotifications(notifRes.data);
+          handleInboundNotifAlerts(notifRes.data);
+        }
+      }
+    } catch (err) {
+      console.error('Error in refreshAppData:', err);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, [role, token, isGuest, handleInboundNotifAlerts]);
+
+  // Initial load
+  useEffect(() => {
+    refreshAppData();
+  }, [refreshAppData]);
+
+  // 15-Second Heartbeat Polling and Tab Visibility Auto-Sync
+  useEffect(() => {
+    const activeToken = getToken() || token;
+    if (!activeToken || isGuest) return;
+
+    const intervalId = setInterval(() => {
+      refreshAppData();
+    }, 15000);
+
+    const handleVisibilitySync = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAppData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilitySync);
+    window.addEventListener('focus', handleVisibilitySync);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
+      window.removeEventListener('focus', handleVisibilitySync);
+    };
+  }, [token, isGuest, refreshAppData]);
+
   // Attempt to restore user preferences from backend on initial mount
   useEffect(() => {
+    const activeToken = getToken() || token;
+    if (!activeToken || isGuest) return;
     getBrandSettings()
       .then((res) => {
         if (res?.success && res.data?.preferences) {
@@ -120,7 +288,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch((_) => {
         // Unauthenticated or default fallback
       });
-  }, []);
+  }, [token, isGuest]);
 
   const formatCurrency = (amount: number | string, fromCurrency = 'INR') => {
     return utilsFormatCurrency(amount, userPreferences.currency || 'INR', fromCurrency);
@@ -138,30 +306,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return utilsFormatDateTime(dateInput, userPreferences.timezone || 'Asia/Kolkata');
   };
 
-  // Toast System
-  const addToast = (type: 'success' | 'error' | 'info', title: string, message?: string, actionLabel?: string, onAction?: () => void) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, type, title, message, actionLabel, onAction }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 4000);
-  };
-
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   // Toggle Saved Creator
-  const toggleSaveCreator = (creatorId: string) => {
+  const toggleSaveCreator = async (creatorId: string) => {
     const isSaved = savedCreatorIds.includes(creatorId);
-    setSavedCreatorIds((prev) => isSaved ? prev.filter((id) => id !== creatorId) : [...prev, creatorId]);
-    addToast(
-      isSaved ? 'info' : 'success',
-      isSaved ? 'Creator removed from saved list' : 'Creator saved to your list',
-      undefined,
-      'Undo',
-      () => setSavedCreatorIds((prev) => isSaved ? [...prev, creatorId] : prev.filter((id) => id !== creatorId))
+
+    // Optimistic UI update
+    setSavedCreatorIds((prev) =>
+      isSaved ? prev.filter((id) => id !== creatorId) : [...prev, creatorId]
     );
+
+    try {
+      if (isSaved) {
+        await removeSavedCreator(creatorId);
+        addToast('info', 'Creator removed from saved list');
+      } else {
+        await saveCreator(creatorId);
+        addToast('success', 'Creator saved to your list');
+      }
+    } catch (err: any) {
+      // Rollback on failure
+      setSavedCreatorIds((prev) =>
+        isSaved ? [...prev, creatorId] : prev.filter((id) => id !== creatorId)
+      );
+      addToast('error', 'Failed to update saved creator', err?.message || 'Please try again.');
+    }
   };
 
   // Send Invitation
@@ -434,15 +606,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Notifications
-  const markNotificationRead = (id: string) => {
+  const markNotificationRead = async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n: any) =>
+        (n._id || n.id) === id ? { ...n, read: true, isRead: true } : n
+      )
     );
+    try {
+      if (role === 'creator') {
+        await markCreatorNotificationRead(id);
+      } else if (role === 'brand') {
+        await markBrandNotificationRead(id);
+      }
+    } catch (err) {
+      console.error('Failed to mark notification read on backend:', err);
+    }
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    addToast('info', 'All notifications marked as read');
+  const markAllNotificationsRead = async () => {
+    setNotifications((prev) =>
+      prev.map((n: any) => ({ ...n, read: true, isRead: true }))
+    );
+    try {
+      if (role === 'creator') {
+        await markAllCreatorNotificationsRead();
+      } else if (role === 'brand') {
+        await markAllBrandNotificationsRead();
+      }
+      addToast('info', 'All notifications marked as read');
+    } catch (err) {
+      console.error('Failed to mark all notifications read on backend:', err);
+    }
   };
 
   return (
@@ -464,6 +658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         convertCurrency,
         formatDate,
         formatDateTime,
+        refreshAppData,
         addToast,
         removeToast,
         toggleSaveCreator,

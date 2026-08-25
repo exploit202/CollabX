@@ -44,6 +44,16 @@ const creatorProfileSchema = new mongoose.Schema(
       trim: true,
       maxlength: [500, 'Bio cannot exceed 500 characters']
     },
+    profileImage: {
+      url: {
+        type: String,
+        default: null
+      },
+      publicId: {
+        type: String,
+        default: null
+      }
+    },
     niche: {
       type: [String],
       default: [],

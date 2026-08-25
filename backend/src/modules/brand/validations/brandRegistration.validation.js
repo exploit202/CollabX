@@ -37,6 +37,15 @@ const brandRegistrationSchema = z
     path: ['workEmail']
   });
 
+const brandOtpVerifySchema = z.object({
+  otp: z
+    .string({ required_error: 'OTP code is required' })
+    .trim()
+    .length(6, 'OTP must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'OTP must be a numeric 6-digit code')
+});
+
 module.exports = {
-  brandRegistrationSchema
+  brandRegistrationSchema,
+  brandOtpVerifySchema
 };

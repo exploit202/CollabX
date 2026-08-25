@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getToken, setToken, getBrandProfile, getCreatorProfile } from '../lib/api';
+import { getToken, setToken, getBrandProfile, getCreatorProfile, getCurrentUser } from '../lib/api';
 
 export type UserRole = 'brand' | 'creator' | 'admin' | 'guest';
 
@@ -22,6 +22,7 @@ export interface User {
 interface AuthContextType {
   user: any;
   role: UserRole;
+  token: string | null;
   isAuthenticated: boolean;
   isGuest: boolean;
   isLoading: boolean;
@@ -35,6 +36,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [tokenState, setTokenState] = useState<string | null>(() => getToken());
   const [role, setRole] = useState<UserRole>(() => {
     const savedRole = localStorage.getItem('collabx_role') as UserRole;
     return savedRole && ['brand', 'creator', 'admin', 'guest'].includes(savedRole) ? savedRole : 'guest';
@@ -60,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (token: string, userData: any, userRole?: UserRole) => {
     setToken(token);
+    setTokenState(token);
     const assignedRole = userRole || userData?.role || 'brand';
     setRole(assignedRole);
     setUser(userData);
@@ -71,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setToken(null);
+    setTokenState(null);
     localStorage.removeItem('collabx_role');
     localStorage.removeItem('collabx_user');
     setIsAuthenticated(false);
@@ -102,6 +106,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      try {
+        const currentRes = await getCurrentUser();
+        if (currentRes.success && currentRes.data?.user?.role === 'admin') { const u=currentRes.data.user; setUser({...u,id:u.id||u._id,name:u.fullName||'Admin'}); setRole('admin'); setIsAuthenticated(true); localStorage.setItem('collabx_role','admin'); localStorage.setItem('collabx_user',JSON.stringify(u)); setIsLoading(false); return; }
+      } catch (e) {}
       try {
         const brandRes = await getBrandProfile();
         if (brandRes.success && brandRes.data?.profile) {
@@ -185,6 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         role,
+        token: tokenState,
         isAuthenticated,
         isGuest,
         isLoading,

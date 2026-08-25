@@ -6,16 +6,16 @@ interface AvatarProps {
   size?: string; // tailwind size classes, e.g. "w-8 h-8"
   textSize?: string; // tailwind text size class for the initials
   className?: string;
+  ring?: boolean;
 }
 
 const COLOR_PAIRS = [
-  'bg-pink-100 text-pink-700',
-  'bg-purple-100 text-purple-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-amber-100 text-amber-700',
-  'bg-sky-100 text-sky-700',
-  'bg-rose-100 text-rose-700',
-  'bg-indigo-100 text-indigo-700',
+  'bg-gradient-to-tr from-pink-500 to-rose-400 text-white',
+  'bg-gradient-to-tr from-purple-600 to-indigo-500 text-white',
+  'bg-gradient-to-tr from-emerald-500 to-teal-400 text-white',
+  'bg-gradient-to-tr from-amber-500 to-orange-400 text-white',
+  'bg-gradient-to-tr from-sky-500 to-blue-600 text-white',
+  'bg-gradient-to-tr from-indigo-600 to-purple-500 text-white',
 ];
 
 function getInitials(name?: string | null): string {
@@ -34,34 +34,31 @@ function getColorForName(name?: string | null): string {
   return COLOR_PAIRS[Math.abs(hash) % COLOR_PAIRS.length];
 }
 
-/**
- * Shows the user's real photo when one is set. Since this demo has no actual
- * photo upload, freshly created accounts don't get a real avatar - so this
- * falls back to a deterministic initials badge instead of a stranger's stock
- * photo pretending to be them.
- */
 export const Avatar: React.FC<AvatarProps> = ({
   src,
   name,
   size = 'w-8 h-8',
   textSize = 'text-xs',
   className = '',
+  ring = false
 }) => {
+  const ringClass = ring ? 'ring-2 ring-pink-500/20 ring-offset-2 ring-offset-white' : '';
+
   if (src) {
     return (
       <img
         src={src}
         alt={name || 'Profile'}
-        className={`${size} rounded-full object-cover border border-slate-200 shrink-0 ${className}`}
+        className={`${size} rounded-full object-cover border border-slate-200/90 shadow-2xs shrink-0 transition-transform duration-200 hover:scale-105 ${ringClass} ${className}`}
       />
     );
   }
 
   return (
     <div
-      className={`${size} ${textSize} rounded-full flex items-center justify-center font-bold shrink-0 border border-white/50 ${getColorForName(
+      className={`${size} ${textSize} rounded-full flex items-center justify-center font-black tracking-tight shrink-0 border border-white/60 shadow-2xs ${getColorForName(
         name
-      )} ${className}`}
+      )} ${ringClass} ${className}`}
     >
       {getInitials(name)}
     </div>

@@ -48,28 +48,28 @@ export const Modal: React.FC<ModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md transition-opacity"
           />
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-3xl shadow-2xl border border-slate-200/80 z-10 overflow-hidden my-8`}
+            exit={{ opacity: 0, scale: 0.95, y: 16 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-3xl shadow-2xl border border-slate-200/90 z-10 overflow-hidden my-8`}
           >
-            <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-base font-extrabold text-slate-900 tracking-tight">{title}</h3>
+            <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/90 via-purple-50/20 to-white">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">{title}</h3>
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition-all active:scale-95"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 max-h-[82vh] overflow-y-auto scrollbar-thin">{children}</div>
+            <div className="p-6 max-h-[82vh] overflow-y-auto">{children}</div>
           </motion.div>
         </div>
       )}

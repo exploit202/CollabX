@@ -15,6 +15,7 @@ const reviewRouter = require('./routes/review.routes');
 const payoutAccountRouter = require('./routes/payoutAccount.routes');
 const paymentRouter = require('../brand/routes/payment.routes');
 const creatorAnalyticsRouter = require('./routes/creatorAnalytics.routes');
+const reportRouter = require('../reports/report.routes').createRoleRouter('creator');
 
 router.use('/auth', creatorAuthRouter);
 router.use('/profile', creatorProfileRouter);
@@ -32,5 +33,6 @@ router.use('/reviews', reviewRouter);
 router.use('/payout-account', payoutAccountRouter);
 router.use('/payments', paymentRouter);
 router.use('/analytics', creatorAnalyticsRouter);
+router.use('/reports', reportRouter);
 
 module.exports = router;

@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "verify": "node tests/verifyPhase2A.js"
+    "verify": "node tests/verifyPhase2A.js",
+    "seed:admin": "node scripts/seedAdmin.js",
+    "seed:demo": "node scripts/seedDemoData.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +16,7 @@
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -25,6 +28,7 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "resend": "^6.19.0",
+    "seed": "^0.4.4",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "zod": "^4.4.3"

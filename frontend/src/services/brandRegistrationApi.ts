@@ -1,18 +1,16 @@
 export interface BrandRegistrationPayload {
   companyName: string;
   workEmail: string;
+  password: string;
   industryType?: string;
   aboutBrand?: string;
-  password: string;
 }
 
 export interface BrandRegistrationResponse {
-  _id: string;
-  fullName: string;
+  userId: string;
+  companyName: string;
   email: string;
   role: 'brand';
-  isVerified: boolean;
-  isActive: boolean;
 }
 
 const parseErrorMessage = async (response: Response) => {
@@ -33,7 +31,7 @@ const parseErrorMessage = async (response: Response) => {
 export const registerBrandAccount = async (
   payload: BrandRegistrationPayload
 ): Promise<BrandRegistrationResponse> => {
-  const response = await fetch('/api/brand/register', {
+  const response = await fetch('/api/brand/auth/register', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -53,21 +51,13 @@ export const registerBrandAccount = async (
   return json.data.user;
 };
 
-export interface BrandLoginPayload {
-  email: string;
-  password: string;
-}
-
-export const loginBrandAccount = async (
-  payload: BrandLoginPayload
-): Promise<BrandRegistrationResponse> => {
-  const response = await fetch('/api/brand/login', {
+export const requestBrandOtpApi = async (): Promise<{ success: boolean; message: string; data?: any }> => {
+  const response = await fetch('/api/brand/auth/otp/send', {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -77,6 +67,25 @@ export const loginBrandAccount = async (
     throw error;
   }
 
-  const json = await response.json();
-  return json.data.user;
+  return response.json();
+};
+
+export const verifyBrandOtpApi = async (otp: string): Promise<{ success: boolean; message: string; data?: any }> => {
+  const response = await fetch('/api/brand/auth/otp/verify', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ otp }),
+  });
+
+  if (!response.ok) {
+    const message = await parseErrorMessage(response);
+    const error = new Error(message) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
 };

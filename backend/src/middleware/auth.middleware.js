@@ -159,9 +159,30 @@ const authorizeRoles = (...roles) => (req, res, next) => {
   return next();
 };
 
+/**
+ * Optional authentication middleware: parses JWT if present, but allows unauthenticated access.
+ */
+const optionalAuth = async (req, res, next) => {
+  try {
+    const { token } = getTokenFromRequest(req);
+    if (!token) return next();
+    const decoded = verifyAccessToken(token);
+    if (decoded?.id || decoded?.userId) {
+      const user = await User.findById(decoded.id || decoded.userId).select('-password');
+      if (user && user.isActive) {
+        req.user = user;
+      }
+    }
+    return next();
+  } catch (err) {
+    return next();
+  }
+};
+
 module.exports = {
   verifyJWT,
   protect: verifyJWT,
   authorizeRoles,
-  authorize: authorizeRoles
+  authorize: authorizeRoles,
+  optionalAuth
 };

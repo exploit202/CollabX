@@ -3,14 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
-import { MessageSquare, Loader2 } from 'lucide-react';
-import { getBrandInvitations, createNegotiation } from '../../lib/api';
+import { Avatar } from '../../components/common/Avatar';
+import { MessageSquare, Loader2, Flag } from 'lucide-react';
+import { getBrandInvitations, createNegotiation, reportCreator } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 
 export const BrandInvitations: React.FC = () => {
-  const { formatCurrency, formatDate } = useApp();
+  const { formatCurrency, formatDate, addToast } = useApp();
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
   const navigate = useNavigate();
 
   const fetchInvitations = async () => {
@@ -67,19 +70,18 @@ export const BrandInvitations: React.FC = () => {
             invitations.map((inv) => {
               const invId = inv._id || inv.id;
               const isOpening = openingId === invId;
-              const creatorAvatar = inv.creatorAvatar || inv.creatorId?.profileImage;
+              const creatorAvatar = inv.creatorAvatar || inv.creatorId?.profileImage?.url || inv.creatorId?.profileImage;
 
               return (
                 <Card key={invId} className="p-5 border-slate-200/90 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      {creatorAvatar ? (
-                        <img src={creatorAvatar} alt={inv.creatorName} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-sm">
-                          {inv.creatorName?.[0] || 'C'}
-                        </div>
-                      )}
+                      <Avatar
+                        src={typeof creatorAvatar === 'object' ? creatorAvatar?.url : creatorAvatar}
+                        name={inv.creatorName}
+                        size="w-10 h-10"
+                        textSize="text-xs"
+                      />
                       <div>
                         <h3 className="text-sm font-bold text-slate-900">{inv.creatorName || 'Creator'}</h3>
                         <p className="text-xs text-slate-500">Campaign: {inv.campaignTitle}</p>
@@ -129,6 +131,18 @@ export const BrandInvitations: React.FC = () => {
                     </span>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setReportTarget({
+                          id: String(inv.creatorId?._id || inv.creatorId),
+                          name: inv.creatorName || 'Creator'
+                        })}
+                        disabled={!inv.creatorId?._id && !inv.creatorId}
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold flex items-center gap-1 transition-all disabled:opacity-50"
+                        title="Report Creator"
+                      >
+                        <Flag className="w-3 h-3" /> Report
+                      </button>
+
                       {(inv.status === 'pending' || inv.status === 'negotiating') && (
                         <button
                           onClick={() => handleOpenDealRoom(invId)}
@@ -150,6 +164,23 @@ export const BrandInvitations: React.FC = () => {
             })
           )}
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole="creator"
+          onSubmit={async (data) => {
+            try {
+              await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
+          }}
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 const BrandProfile = require('../../../models/brandProfile.model');
 const { successResponse } = require('../../../utils/apiResponse');
+const { uploadUserProfileImage } = require('../../../services/profileImage.service');
 
 const getProfile = async (req, res, next) => {
   try {
@@ -35,7 +36,19 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+const uploadProfileImage = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user._id || req.user.id;
+    const result = await uploadUserProfileImage(userId, req.file.buffer, 'brand');
+
+    return successResponse(res, 200, 'Profile image uploaded successfully.', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getProfile,
-  updateProfile
+  updateProfile,
+  uploadProfileImage
 };

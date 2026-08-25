@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
@@ -23,9 +23,11 @@ import {
   Plus,
   X,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Camera,
+  Upload
 } from 'lucide-react';
-import { getCreatorProfile, updateCreatorProfile, verifyCreatorPlatformUrl } from '../../lib/api';
+import { getCreatorProfile, updateCreatorProfile, verifyCreatorPlatformUrl, uploadCreatorProfileImage } from '../../lib/api';
 
 const NICHE_OPTIONS = [
   'Tech & Gadgets',
@@ -97,6 +99,55 @@ export const CreatorProfilePage: React.FC = () => {
   const [platformVerifyError, setPlatformVerifyError] = useState<string | null>(null);
   const [platformVerifySuccess, setPlatformVerifySuccess] = useState<string | null>(null);
   const [customPlatformsList, setCustomPlatformsList] = useState<{ key: PlatformKey; link: string }[]>([]);
+
+  // Profile Image Upload state & ref
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+
+  const handleImageFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate File Type
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+    if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      addToast('error', 'Unsupported File Type', 'Please select a JPG, JPEG, PNG, or WEBP image.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate File Size (5 MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('error', 'File Size Limit Exceeded', 'Profile image size must not exceed 5 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      const res = await uploadCreatorProfileImage(file);
+      if (res.success && (res.data?.profileImage?.url || res.data?.user?.profileImage)) {
+        const imageUrl = res.data.profileImage?.url || res.data.user?.profileImage;
+        const imageObj = res.data.profileImage || { url: imageUrl, publicId: null };
+
+        setProfileData((prev: any) => ({ ...prev, profileImage: imageObj }));
+        setUserData((prev: any) => ({ ...prev, avatar: imageUrl, profileImage: imageUrl }));
+
+        addToast('success', 'Profile Photo Updated!', 'Your new profile photo has been uploaded successfully.');
+      }
+    } catch (err: any) {
+      console.error('Failed to upload creator profile image:', err);
+      const errMsg = err?.message || err?.data?.message || 'Failed to upload profile image. Please try again.';
+      addToast('error', 'Upload Failed', errMsg);
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -379,10 +430,19 @@ export const CreatorProfilePage: React.FC = () => {
 
   const displayName = userData?.fullName || user?.fullName || 'Content Creator';
   const displayEmail = userData?.email || user?.email || '';
-  const displayAvatar = userData?.avatar || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+  const displayAvatar = profileData?.profileImage?.url || userData?.profileImage || userData?.avatar || user?.avatar || user?.profileImage || null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Hidden File Input for Avatar Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        onChange={handleImageFileSelect}
+        className="hidden"
+      />
+
       {/* Header title */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Creator Profile</h1>
@@ -449,22 +509,63 @@ export const CreatorProfilePage: React.FC = () => {
 
       {/* Main Profile Card */}
       <Card className="p-6 md:p-8 border-slate-200/90 shadow-md">
-        <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
-          <Avatar src={displayAvatar} alt={displayName} size="lg" className="border-2 border-pink-500/20" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black text-slate-900">{displayName}</h2>
-              {user?.isVerified && <CheckCircle2 className="w-4 h-4 text-pink-500 fill-pink-50" />}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <Avatar
+                src={displayAvatar}
+                name={displayName}
+                size="w-20 h-20"
+                textSize="text-xl"
+                className="border-2 border-pink-500/20 shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="absolute bottom-0 right-0 p-2 bg-[#EC4899] hover:bg-pink-600 text-white rounded-full shadow-md transition-all cursor-pointer disabled:opacity-50"
+                title="Change Profile Photo"
+              >
+                {isUploadingImage ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5" />
+                )}
+              </button>
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-medium">
-              <span className="flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-slate-400" /> {displayEmail}
-              </span>
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Account Verified
-              </span>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-black text-slate-900">{displayName}</h2>
+                {user?.isVerified && <CheckCircle2 className="w-4 h-4 text-pink-500 fill-pink-50" />}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1 font-medium">
+                <span className="flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" /> {displayEmail}
+                </span>
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Account Verified
+                </span>
+              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingImage}
+            className="px-4 py-2 bg-pink-50 border border-pink-200 hover:bg-pink-100 text-[#EC4899] font-bold text-xs rounded-xl transition-all flex items-center gap-2 self-start sm:self-auto cursor-pointer disabled:opacity-50 shadow-2xs"
+          >
+            {isUploadingImage ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Uploading Photo...
+              </>
+            ) : (
+              <>
+                <Camera className="w-4 h-4" /> Change Photo
+              </>
+            )}
+          </button>
         </div>
 
         {/* Global Messages */}

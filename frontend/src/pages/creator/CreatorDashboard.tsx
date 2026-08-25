@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { SkeletonLoader } from '../../components/common/SkeletonLoader';
 import { getCreatorDashboard, respondToInvitation, getCreatorAnalytics } from '../../lib/api';
 import {
   Mail,
@@ -19,12 +20,16 @@ import {
   TrendingUp,
   AlertTriangle,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
+import { formatRelativeTime } from '../../utils/dateTime';
+import { getNotificationRoute } from '../../utils/notificationRoutes';
 
 export const CreatorDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formatCurrency } = useApp();
+  const { formatCurrency, notifications, markNotificationRead } = useApp();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -118,49 +123,56 @@ export const CreatorDashboard: React.FC = () => {
   const creatorName = user?.fullName || user?.name || 'Creator';
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl">
-        <div className="space-y-2">
-          <Badge variant="purple" className="bg-purple-500/20 text-purple-300 border-purple-500/30">
-            Creator Studio
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Welcome back, {creatorName}!
-          </h1>
-          <p className="text-xs text-slate-300 max-w-lg">
-            Review incoming brand collaboration requests, update package pricing, and track your collaboration earnings and rating insights.
-          </p>
-        </div>
+    <div className="space-y-8 animate-fade-in">
+      {/* Welcome Hero Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white p-7 md:p-9 rounded-3xl shadow-2xl border border-slate-800">
+        {/* Ambient Light Accents */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex items-center gap-3">
-          <Link
-            to="/creator/requests"
-            className="px-5 py-3 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-xl transition-all shadow-lg flex items-center gap-2"
-          >
-            <Mail className="w-4 h-4" />
-            Brand Offers
-          </Link>
-          <Link
-            to="/creator/discover"
-            className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-2"
-          >
-            <Search className="w-4 h-4" />
-            Discover Briefs
-          </Link>
-          <Link
-            to="/creator/portfolio"
-            className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-2"
-          >
-            <FolderKanban className="w-4 h-4" />
-            Portfolio
-          </Link>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[11px] font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" /> Creator Studio Workspace
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight">
+              Welcome back, <span className="bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">{creatorName}</span>!
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+              Review incoming brand collaboration requests, manage negotiation offers, update deliverable pricing, and track your escrow earnings in real-time.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Link
+              to="/creator/requests"
+              className="px-5 py-3 bg-gradient-to-r from-[#EC4899] to-[#8B5CF6] hover:opacity-95 text-white font-bold text-xs rounded-2xl transition-all shadow-lg hover:shadow-pink-500/25 flex items-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <Mail className="w-4 h-4" />
+              Brand Offers
+            </Link>
+            <Link
+              to="/creator/discover"
+              className="px-4.5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-2xl transition-all border border-white/20 backdrop-blur-md flex items-center gap-2 active:scale-95"
+            >
+              <Search className="w-4 h-4" />
+              Browse Briefs
+            </Link>
+            <Link
+              to="/creator/portfolio"
+              className="px-4.5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-2xl transition-all border border-white/20 backdrop-blur-md flex items-center gap-2 active:scale-95"
+            >
+              <FolderKanban className="w-4 h-4" />
+              Portfolio
+            </Link>
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+        <div className="space-y-6">
+          <SkeletonLoader variant="stat" count={4} />
+          <SkeletonLoader variant="card" count={2} />
         </div>
       ) : (
         <>
@@ -262,40 +274,45 @@ export const CreatorDashboard: React.FC = () => {
             <Card className="lg:col-span-2 p-5 border-slate-200/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">Recent Invitations & Offers</h2>
-                  <p className="text-xs text-slate-500 mt-1">Direct briefs received from top brands.</p>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Notifications & Activity</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Latest briefs, counter offers, approvals, and payout updates.</p>
                 </div>
-                <Mail className="w-5 h-5 text-pink-500"/>
+                <Link to="/creator/notifications" className="text-xs font-bold text-purple-600 hover:underline flex items-center gap-1">
+                  View all <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
-              <div className="space-y-3 mt-4">
-                {(!dashboardData?.recentRequests || dashboardData.recentRequests.length === 0) ? (
-                  <p className="text-xs text-slate-400 py-4 text-center">No pending invitations currently.</p>
+              <div className="space-y-2.5 mt-4">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No recent notifications.</p>
                 ) : (
-                  dashboardData.recentRequests.map((req: any) => (
-                    <div key={req._id || req.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-900 block">{req.brandName}</span>
-                        <span className="text-slate-500 text-[11px]">{req.campaignTitle} — {formatCurrency(req.proposedPrice || 0)}</span>
-                      </div>
-                      {req.status === 'pending' && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleResponse(req._id || req.id, 'accepted')}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleResponse(req._id || req.id, 'rejected')}
-                            className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px] rounded-lg"
-                          >
-                            Decline
-                          </button>
+                  notifications.slice(0, 5).map((n: any) => {
+                    const isUnread = !n.read && !n.isRead;
+                    const nid = n._id || n.id;
+                    return (
+                      <Link
+                        key={nid}
+                        to={getNotificationRoute(n, 'creator')}
+                        onClick={() => markNotificationRead(nid)}
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                          isUnread
+                            ? 'bg-purple-50/50 border-purple-200 hover:bg-purple-50'
+                            : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isUnread && <span className="w-2 h-2 rounded-full bg-[#EC4899] shrink-0" />}
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-900 block truncate">{n.title || n.message}</span>
+                            <span className="text-slate-500 text-[11px] block truncate">{n.message}</span>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-3">
+                          {formatRelativeTime(n.createdAt || n.timestamp)}
+                        </span>
+                      </Link>
+                    );
+                  })
                 )}
               </div>
             </Card>

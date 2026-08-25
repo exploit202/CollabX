@@ -24,7 +24,7 @@ const discoverCreators = async (filters = {}) => {
   // 1. Fetch all registered creators with active accounts
   const creatorUsers = await User.find({
     role: 'creator',
-    isActive: true
+    isActive: { $ne: false }
   }).select('fullName email profileImage isVerified createdAt').lean();
 
   if (!creatorUsers || creatorUsers.length === 0) {
@@ -136,6 +136,7 @@ const discoverCreators = async (filters = {}) => {
       id: uidStr,
       _id: uidStr,
       userId: uidStr,
+      profileId: prof._id ? prof._id.toString() : null,
       name: u.fullName || 'Creator',
       email: u.email,
       avatar: u.profileImage || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150`,
@@ -241,16 +242,85 @@ const discoverCreators = async (filters = {}) => {
 };
 
 /**
- * Issue 3 Fix: Retrieve single creator profile by ID from MongoDB
+ * Issue 3 Fix: Retrieve single creator profile by ID from MongoDB (supports User ID or CreatorProfile ID)
  */
 const getCreatorById = async (creatorId) => {
+  if (!creatorId) {
+    const error = new Error('Creator ID is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cidStr = String(creatorId);
   const creators = await discoverCreators({});
-  const found = creators.find((c) => c.id === creatorId || c._id === creatorId || c.userId === creatorId);
+
+  let found = creators.find(
+    (c) =>
+      String(c.id) === cidStr ||
+      String(c._id) === cidStr ||
+      String(c.userId) === cidStr ||
+      (c.profileId && String(c.profileId) === cidStr)
+  );
+
+  if (!found && mongoose.Types.ObjectId.isValid(cidStr)) {
+    let prof = await CreatorProfile.findById(cidStr).populate('userId', 'fullName email profileImage isVerified').lean();
+    if (!prof) {
+      prof = await CreatorProfile.findOne({ userId: cidStr }).populate('userId', 'fullName email profileImage isVerified').lean();
+    }
+
+    if (prof) {
+      let u = prof.userId;
+      if (!u || typeof u !== 'object') {
+        u = await User.findById(prof.userId || cidStr).select('fullName email profileImage isVerified').lean();
+      }
+
+      if (u) {
+        const uidStr = (u._id || u.id || cidStr).toString();
+        const packages = await Pricing.find({ creatorId: uidStr, isActive: true }).lean();
+        const creatorPackages = packages.map((pkg) => ({
+          id: pkg._id.toString(),
+          _id: pkg._id.toString(),
+          type: pkg.title,
+          title: pkg.title,
+          deliverableType: pkg.title,
+          platform: pkg.platform,
+          price: pkg.price,
+          deliveryDays: pkg.deliveryDays,
+          description: pkg.description
+        }));
+
+        found = {
+          id: uidStr,
+          _id: uidStr,
+          userId: uidStr,
+          profileId: prof._id ? prof._id.toString() : null,
+          name: u.fullName || 'Creator',
+          email: u.email,
+          avatar: u.profileImage || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150`,
+          verified: Boolean(u.isVerified || prof.verified),
+          category: prof.primaryContentNiche || (Array.isArray(prof.niche) ? prof.niche[0] : 'General Creator'),
+          bio: prof.bio || 'Verified CollabX Creator available for brand collaborations and custom content packages.',
+          country: [prof.location?.city, prof.location?.country].filter(Boolean).join(', ') || 'India',
+          location: { city: prof.location?.city || '', country: prof.location?.country || '' },
+          language: ['English', 'Hindi'],
+          rating: typeof prof.rating === 'number' ? prof.rating : 0,
+          reviewCount: typeof prof.totalReviews === 'number' ? prof.totalReviews : 0,
+          socials: [{ platform: 'instagram', followers: prof.followers || 15000, engagementRate: prof.engagementRate || 4.2 }],
+          audienceMetrics: prof.audienceMetrics || {},
+          pricing: creatorPackages,
+          minStartingPrice: creatorPackages.length > 0 ? Math.min(...creatorPackages.map((p) => p.price)) : 5000,
+          matchScore: 95
+        };
+      }
+    }
+  }
+
   if (!found) {
     const error = new Error('Creator profile not found.');
     error.statusCode = 404;
     throw error;
   }
+
   return found;
 };
 

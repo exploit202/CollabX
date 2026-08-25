@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from './Avatar';
@@ -41,9 +42,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
   const { role, isGuest, user } = useAuth();
   const { notifications, invitations, negotiations } = useApp();
 
-  const unreadNotifCount = notifications.filter((n) => !n.read).length;
-  const pendingInvCount = invitations.filter((i) => i.status === 'pending').length;
-  const activeNegCount = negotiations.filter((n) => n.status === 'active').length;
+  const unreadNotifCount = notifications.filter((n: any) => !n.read && !n.isRead).length;
+  const pendingInvCount = invitations.filter((i: any) => i.status === 'pending').length;
+  const activeNegCount = negotiations.filter((n: any) => ['active', 'open', 'pending', 'in_progress'].includes(n.status)).length;
 
   const brandNav: NavItem[] = [
     { name: 'Dashboard', path: '/brand/dashboard', icon: LayoutDashboard },
@@ -80,6 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
     { name: 'Campaigns', path: '/admin/campaigns', icon: Megaphone },
     { name: 'Collaborations', path: '/admin/collaborations', icon: Briefcase },
     { name: 'Reports', path: '/admin/reports', icon: ShieldAlert },
+    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: unreadNotifCount },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
@@ -139,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
       )}
 
       {/* Nav Menu */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
         {currentNav.map((item) => {
           const Icon = item.icon;
           return (
@@ -148,22 +150,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
               to={item.path}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                `relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 group ${
                   isActive
-                    ? 'bg-gradient-to-r from-pink-50 to-purple-50/50 text-[#EC4899] font-extrabold border-l-3 border-[#EC4899] shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'text-[#EC4899] shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
                 }`
               }
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span className="truncate">{item.name}</span>
-              </div>
-              {item.badge && item.badge > 0 ? (
-                <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-[#EC4899] text-white shadow-2xs">
-                  {item.badge}
-                </span>
-              ) : null}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span
+                      layoutId="sidebarActiveBg"
+                      className="absolute inset-0 bg-gradient-to-r from-pink-50/90 via-purple-50/50 to-white border border-pink-100/80 rounded-xl shadow-2xs -z-10"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 transition-all duration-200 ${isActive ? 'text-[#EC4899] scale-110' : 'text-slate-400 group-hover:text-slate-700 group-hover:scale-110'}`} />
+                    <span className="truncate tracking-tight">{item.name}</span>
+                  </div>
+                  {item.badge && item.badge > 0 ? (
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-[#EC4899] to-[#8B5CF6] text-white shadow-xs">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                  {isActive && (
+                    <motion.span
+                      layoutId="sidebarActiveBar"
+                      className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gradient-to-b from-[#EC4899] to-[#8B5CF6]"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </>
+              )}
             </NavLink>
           );
         })}
@@ -177,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           onClick={onClose}
           className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-100 transition-colors"
         >
-          <Avatar src={user?.avatar || user?.profileImage} name={user?.name || user?.fullName} size="w-9 h-9" textSize="text-xs" />
+          <Avatar src={typeof user?.profileImage === 'object' ? user?.profileImage?.url : (user?.profileImage || user?.avatar)} name={user?.name || user?.fullName} size="w-9 h-9" textSize="text-xs" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-slate-800 truncate">{user?.name || user?.fullName || 'Your Account'}</p>
             <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>

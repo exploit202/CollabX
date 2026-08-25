@@ -5,6 +5,8 @@ import { AuthShell } from '../../components/common/AuthShell';
 import { PasswordField } from '../../components/common/FormField';
 import { useApp } from '../../context/AppContext';
 
+import { resetForgottenPassword } from '../../lib/api';
+
 interface FormErrors {
   password?: string;
   confirmPassword?: string;
@@ -19,7 +21,10 @@ export const ResetPasswordPage: React.FC = () => {
   const { addToast } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const email = (location.state as { email?: string } | null)?.email;
+
+  const locationState = location.state as { email?: string; resetToken?: string } | null;
+  const email = locationState?.email;
+  const resetToken = locationState?.resetToken;
 
   const validate = (): boolean => {
     const next: FormErrors = {};
@@ -33,12 +38,25 @@ export const ResetPasswordPage: React.FC = () => {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+
+    if (!resetToken) {
+      addToast('error', 'Session Expired', 'Password reset verification session missing or expired. Please request a new code.');
+      navigate('/forgot-password');
+      return;
+    }
+
     setIsSubmitting(true);
-    // Placeholder for real "reset password" call - backend integration pending.
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsSubmitting(false);
-    setResetSuccess(true);
-    addToast('success', 'Password reset successful!');
+    try {
+      await resetForgottenPassword(password, resetToken, email);
+      setIsSubmitting(false);
+      setResetSuccess(true);
+      addToast('success', 'Password reset successful!', 'Your password has been updated securely. Please sign in now.');
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const msg = err.message || 'Failed to update password. Please request a new verification code.';
+      setErrors({ password: msg });
+      addToast('error', 'Password Reset Failed', msg);
+    }
   };
 
   return (

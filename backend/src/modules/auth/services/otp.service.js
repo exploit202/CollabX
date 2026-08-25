@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const Otp = require('../../../models/otp.model');
 
-const generateOtp = async (userId) => {
+const generateOtp = async (userId, purpose = 'email_verification') => {
   if (!userId) {
     const error = new Error('User ID is required for OTP generation.');
     error.statusCode = 400;
@@ -16,11 +16,12 @@ const generateOtp = async (userId) => {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   const otpRecord = await Otp.findOneAndUpdate(
-    { userId },
+    { userId, purpose },
     {
       otpHash,
       expiresAt,
       attempts: 0,
+      purpose,
       lastSentAt: new Date(),
       createdAt: new Date()
     },
@@ -33,7 +34,7 @@ const generateOtp = async (userId) => {
   };
 };
 
-const verifyOtp = async (userId, otp) => {
+const verifyOtp = async (userId, otp, purpose = 'email_verification') => {
   if (!userId) {
     const error = new Error('User ID is required for OTP verification.');
     error.statusCode = 400;
@@ -48,7 +49,7 @@ const verifyOtp = async (userId, otp) => {
     throw error;
   }
 
-  const otpRecord = await Otp.findOne({ userId });
+  const otpRecord = await Otp.findOne({ userId, purpose });
 
   if (!otpRecord) {
     const error = new Error('OTP does not exist or has expired.');

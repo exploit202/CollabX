@@ -4,9 +4,11 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { SendInvitationModal } from '../../components/modals/SendInvitationModal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
-import { getCreatorById } from '../../lib/api';
+import { getCreatorById, reportCreator } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 import {
   Star,
   CheckCircle2,
@@ -24,12 +26,13 @@ import {
   Users,
   Clock,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Flag
 } from 'lucide-react';
 
 export const CreatorDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { savedCreatorIds, toggleSaveCreator, formatCurrency } = useApp();
+  const { savedCreatorIds, toggleSaveCreator, formatCurrency, addToast } = useApp();
   const { isGuest } = useAuth();
 
   const [creator, setCreator] = useState<any | null>(null);
@@ -39,6 +42,7 @@ export const CreatorDetailPage: React.FC = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'pricing' | 'portfolio' | 'reviews'>('overview');
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -117,10 +121,12 @@ export const CreatorDetailPage: React.FC = () => {
       <Card className="p-6 md:p-8 border-slate-200/90 shadow-md relative">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-start md:items-center gap-5">
-            <img
-              src={creator.avatar}
-              alt={creator.name}
-              className="w-20 h-20 rounded-full object-cover border-2 border-slate-200 shadow-sm shrink-0"
+            <Avatar
+              src={creator.profileImage?.url || creator.userId?.profileImage || creator.avatar || null}
+              name={creator.name}
+              size="w-20 h-20"
+              textSize="text-xl"
+              className="border-2 border-slate-200 shadow-sm shrink-0"
             />
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
@@ -149,24 +155,34 @@ export const CreatorDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0 justify-start md:justify-end">
             {!isGuest && (
               <>
                 <button
                   onClick={() => toggleSaveCreator(creator.id || creator._id)}
-                  className={`p-3 rounded-2xl border transition-all ${
+                  className={`p-3 rounded-2xl border transition-all active:scale-95 cursor-pointer ${
                     isSaved ? 'bg-pink-50 border-pink-200 text-[#EC4899]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
+                  title={isSaved ? 'Remove from Saved' : 'Save Creator'}
                 >
                   <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#EC4899]' : ''}`} />
                 </button>
 
                 <button
                   onClick={() => setShowInviteModal(true)}
-                  className="flex-1 md:flex-none px-6 py-3 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none px-5 py-3 bg-gradient-to-r from-[#EC4899] to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-pink-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                   Send Collaboration Request
+                </button>
+
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="px-3.5 py-3 bg-rose-50/80 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
+                  title="Report Creator Profile"
+                >
+                  <Flag className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Report</span>
                 </button>
               </>
             )}
@@ -342,7 +358,7 @@ export const CreatorDetailPage: React.FC = () => {
                 <Card key={rev.id || rev._id} className="p-4 border-slate-200/90 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <img src={rev.reviewerAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'} alt={rev.reviewerName} className="w-7 h-7 rounded-full object-cover" />
+                      <Avatar src={typeof rev.reviewerAvatar === 'object' ? rev.reviewerAvatar?.url : (rev.reviewerAvatar || rev.reviewer?.profileImage?.url || rev.reviewer?.profileImage || null)} name={rev.reviewerName} size="w-7 h-7" textSize="text-[10px]" />
                       <span className="text-xs font-bold text-slate-900">{rev.reviewerName}</span>
                     </div>
                     <div className="flex items-center text-amber-500 font-bold text-xs gap-1">
@@ -369,6 +385,22 @@ export const CreatorDetailPage: React.FC = () => {
         onClose={() => setShowReviewModal(false)}
         creatorId={creator.id || creator._id}
         creatorName={creator.name}
+      />
+      <ReportUserModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetName={creator?.name || 'Creator'}
+        targetRole="creator"
+        onSubmit={async (data) => {
+          const creatorId = String(creator?.id || creator?._id || creator?.userId || '');
+          if (!creatorId) return;
+          try {
+            await reportCreator({ reportedAgainst: creatorId, ...data });
+            addToast('success', 'Report Submitted', `Your report against ${creator?.name || 'Creator'} has been submitted for admin review.`);
+          } catch (err: any) {
+            addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+          }
+        }}
       />
     </div>
   );

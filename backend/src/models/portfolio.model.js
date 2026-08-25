@@ -20,24 +20,42 @@ const portfolioSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      trim: true
+      trim: true,
+      default: ''
     },
     brandName: {
       type: String,
-      trim: true
+      trim: true,
+      default: ''
+    },
+    platform: {
+      type: String,
+      enum: ['youtube', 'instagram', 'shorts-reels', 'other'],
+      default: 'youtube'
     },
     mediaType: {
       type: String,
-      enum: ['image', 'video'],
-      required: true
+      default: 'video'
     },
     thumbnail: {
       type: String,
       default: ''
     },
-    views: {
+    contentUrl: {
+      type: String,
+      default: ''
+    },
+    campaignValue: {
       type: Number,
       default: 0
+    },
+    views: {
+      type: mongoose.Schema.Types.Mixed,
+      default: 0
+    },
+    engagementRate: {
+      type: mongoose.Schema.Types.Mixed,
+      default: ''
     },
     likes: {
       type: Number,

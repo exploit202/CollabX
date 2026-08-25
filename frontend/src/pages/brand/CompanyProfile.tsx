@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Building2, Save, Upload, Instagram, Linkedin, Loader2 } from 'lucide-react';
-import { updateBrandProfile } from '../../lib/api';
+import { getBrandProfile, updateBrandProfile, uploadBrandProfileImage } from '../../lib/api';
 
 const categories = ['Tech & Gadgets', 'Fashion & Lifestyle', 'Fitness & Wellness', 'Gaming', 'Travel', 'Beauty & Skincare'];
 const platforms = ['Instagram', 'YouTube', 'X / Twitter'];
@@ -22,29 +22,97 @@ export const CompanyProfile: React.FC = () => {
   const { addToast } = useApp();
   const brand = user as any;
 
-  const [logo, setLogo] = useState(brand?.logo || brand?.companyLogo || '');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const [logo, setLogo] = useState(brand?.logo || brand?.companyLogo || brand?.profileImage?.url || brand?.profileImage || '');
   const [companyName, setCompanyName] = useState(brand?.companyName || brand?.name || '');
   const [industry, setIndustry] = useState(brand?.industry || '');
   const [website, setWebsite] = useState(brand?.website || '');
   const [country, setCountry] = useState(brand?.country || '');
-  const [description, setDescription] = useState(brand?.description || '');
+  const [description, setDescription] = useState(brand?.description || brand?.aboutBrand || '');
   const [contactName, setContactName] = useState(brand?.contactName || brand?.name || '');
   const [contactRole, setContactRole] = useState(brand?.contactRole || '');
-  const [instagramUrl, setInstagramUrl] = useState(brand?.instagramUrl || '');
-  const [linkedinUrl, setLinkedinUrl] = useState(brand?.linkedinUrl || '');
+  const [instagramUrl, setInstagramUrl] = useState(brand?.instagramUrl || brand?.socialLinks?.instagram || '');
+  const [linkedinUrl, setLinkedinUrl] = useState(brand?.linkedinUrl || brand?.socialLinks?.linkedin || '');
   const [targetAudience, setTargetAudience] = useState(brand?.targetAudience || '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(brand?.preferredCreatorCategories || []);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(brand?.preferredPlatforms || []);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    const fetchBrandProfile = async () => {
+      try {
+        const res = await getBrandProfile();
+        if (res.success && res.data?.profile) {
+          const p = res.data.profile;
+          const imgUrl = p.profileImage?.url || p.companyLogo || p.userId?.profileImage || null;
+          if (imgUrl) setLogo(imgUrl);
+          if (p.companyName) setCompanyName(p.companyName);
+          if (p.industry) setIndustry(p.industry);
+          if (p.website) setWebsite(p.website);
+          if (p.location?.country) setCountry(p.location.country);
+          if (p.aboutBrand) setDescription(p.aboutBrand);
+          if (p.contactName) setContactName(p.contactName);
+          if (p.contactRole) setContactRole(p.contactRole);
+          if (p.socialLinks?.instagram) setInstagramUrl(p.socialLinks.instagram);
+          if (p.socialLinks?.linkedin) setLinkedinUrl(p.socialLinks.linkedin);
+          if (p.targetAudience) setTargetAudience(p.targetAudience);
+          if (p.preferredCreatorCategories) setSelectedCategories(p.preferredCreatorCategories);
+          if (p.preferredPlatforms) setSelectedPlatforms(p.preferredPlatforms);
+        }
+      } catch (err) {
+        console.error('Failed to fetch brand profile:', err);
+      }
+    };
+    fetchBrandProfile();
+  }, []);
+
   const toggle = (value: string, values: string[], set: (v: string[]) => void) =>
     set(values.includes(value) ? values.filter((x) => x !== value) : [...values, value]);
 
-  const upload = (file?: File) => {
+  const handleImageFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setLogo(String(reader.result));
-    reader.readAsDataURL(file);
+
+    // Validate File Type
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+    if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      addToast('error', 'Unsupported File Type', 'Please select a JPG, JPEG, PNG, or WEBP image.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate File Size (5 MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('error', 'File Size Limit Exceeded', 'Brand image size must not exceed 5 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      const res = await uploadBrandProfileImage(file);
+      if (res.success && (res.data?.profileImage?.url || res.data?.user?.profileImage)) {
+        const imageUrl = res.data.profileImage?.url || res.data.user?.profileImage;
+
+        setLogo(imageUrl);
+        updateUserProfile({ logo: imageUrl, companyLogo: imageUrl, profileImage: imageUrl });
+
+        addToast('success', 'Brand Logo Updated!', 'Your brand image has been uploaded successfully.');
+      }
+    } catch (err: any) {
+      console.error('Failed to upload brand profile image:', err);
+      const errMsg = err?.message || err?.data?.message || 'Failed to upload brand profile image. Please try again.';
+      addToast('error', 'Upload Failed', errMsg);
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -84,6 +152,15 @@ export const CompanyProfile: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Hidden File Input for Brand Logo Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        onChange={handleImageFileSelect}
+        className="hidden"
+      />
+
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Company Profile</h1>
         <p className="text-xs text-slate-500">Manage the information creators see before accepting your invitations.</p>
@@ -91,21 +168,32 @@ export const CompanyProfile: React.FC = () => {
 
       <Card className="p-6 md:p-8 border-slate-200/90 shadow-md">
         <form onSubmit={submit} className="space-y-6">
-          <div className="flex items-center gap-5 pb-5 border-b">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 border overflow-hidden flex items-center justify-center">
+          <div className="flex items-center gap-5 pb-5 border-b border-slate-100">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden flex items-center justify-center shrink-0">
               {logo ? (
                 <img src={logo} alt="Company logo" className="w-full h-full object-cover" />
               ) : (
-                <Building2 className="text-slate-400" />
+                <Building2 className="w-8 h-8 text-slate-400" />
               )}
             </div>
             <div>
-              <label className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl inline-flex gap-1.5 cursor-pointer">
-                <Upload className="w-3.5 h-3.5" />
-                Upload brand logo
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
-              </label>
-              <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, or SVG · recommended 400 × 400</p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+              >
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading Logo...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" /> Upload Brand Logo
+                  </>
+                )}
+              </button>
+              <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, or WEBP · max 5 MB</p>
             </div>
           </div>
 

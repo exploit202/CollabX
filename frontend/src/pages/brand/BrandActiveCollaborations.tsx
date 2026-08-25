@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
 import { Modal } from '../../components/common/Modal';
 import { WriteReviewModal } from '../../components/modals/WriteReviewModal';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
 import { CollaborationActivity } from '../../components/CollaborationActivity';
 import {
   ExternalLink,
@@ -13,7 +15,8 @@ import {
   CheckCheck,
   Loader2,
   DollarSign,
-  ShieldCheck
+  ShieldCheck,
+  Flag
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import {
@@ -23,14 +26,16 @@ import {
   completeCollaboration,
   initiateEscrowPayment,
   releaseEscrowPayment,
-  getBrandPayments
+  getBrandPayments,
+  reportCreator
 } from '../../lib/api';
 
 export const BrandActiveCollaborations: React.FC = () => {
-  const { formatCurrency, formatDate } = useApp();
+  const { formatCurrency, formatDate, addToast } = useApp();
   const [collaborations, setCollaborations] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const [revisionCollabId, setRevisionCollabId] = useState<string | null>(null);
   const [revisionNotes, setRevisionNotes] = useState('');
@@ -164,13 +169,18 @@ export const BrandActiveCollaborations: React.FC = () => {
               const campaignTitle = collab.campaignTitle || (typeof collab.campaignId === 'object' ? collab.campaignId?.title : '') || 'Campaign Collaboration';
               const deadlineStr = formatDate(collab.deadline || (typeof collab.campaignId === 'object' ? collab.campaignId?.deadline : null)) || 'No Deadline Specified';
 
+              const creatorAvatar = collab.creatorAvatar || collab.creatorId?.profileImage?.url || collab.creatorId?.profileImage;
+
               return (
                 <Card key={collabId} className="p-6 border-slate-200/90 space-y-4">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-lg">
-                        {collab.creatorName?.[0] || 'C'}
-                      </div>
+                      <Avatar
+                        src={typeof creatorAvatar === 'object' ? creatorAvatar?.url : creatorAvatar}
+                        name={collab.creatorName}
+                        size="w-12 h-12"
+                        textSize="text-base"
+                      />
                       <div>
                         <h3 className="text-base font-bold text-slate-900">{collab.creatorName}</h3>
                         <p className="text-xs text-slate-500">
@@ -187,50 +197,100 @@ export const BrandActiveCollaborations: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Escrow Status Banner */}
-                  <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className={`w-4 h-4 ${payment?.status === 'released' ? 'text-emerald-600' : payment?.status === 'escrowed' ? 'text-purple-600' : 'text-slate-400'}`} />
-                      <span className="font-semibold text-slate-700">
-                        Escrow Status: <b className="uppercase">{payment ? payment.status : 'NOT_DEPOSITED'}</b>
-                        {payment?.status === 'escrowed' && ' (Funds Secured)'}
-                        {payment?.status === 'released' && ' (Payout Released)'}
-                      </span>
+                  {/* Enhanced Escrow Demo Status Card & Payment Timeline */}
+                  <div className="p-4 bg-gradient-to-br from-slate-50 to-purple-50/40 border border-purple-100/80 rounded-2xl space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100/60 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                          payment?.status === 'released'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : payment?.status === 'funded' || payment?.status === 'escrowed'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-800">CollabX Escrow Vault</span>
+                            <Badge variant={
+                              payment?.status === 'released'
+                                ? 'emerald'
+                                : payment?.status === 'funded' || payment?.status === 'escrowed'
+                                ? 'purple'
+                                : 'amber'
+                            }>
+                              {payment?.status === 'released'
+                                ? 'RELEASED'
+                                : payment?.status === 'funded' || payment?.status === 'escrowed'
+                                ? 'FUNDED & SECURED'
+                                : 'PENDING DEPOSIT'}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            {payment?.status === 'released'
+                              ? `Funds of ${formatCurrency(payment?.amount || collab.agreedBudget || 0)} transferred to creator.`
+                              : payment?.status === 'funded' || payment?.status === 'escrowed'
+                              ? `Funds of ${formatCurrency(payment?.amount || collab.agreedBudget || 0)} held safely in escrow.`
+                              : 'Deposit funds into escrow to guarantee creator payment.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        {(!payment || payment.status === 'pending') && (
+                          <button
+                            onClick={() => handleInitiateEscrow(collabId)}
+                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+                          >
+                            <DollarSign className="w-3.5 h-3.5" /> Fund Escrow ({formatCurrency(collab.agreedBudget || collab.agreedPrice || 0)})
+                          </button>
+                        )}
+
+                        {payment && (payment.status === 'funded' || payment.status === 'escrowed') && (
+                          <button
+                            onClick={() => handleReleaseEscrow(payment._id || payment.id)}
+                            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+                          >
+                            <CheckCheck className="w-3.5 h-3.5" /> Release Payment to Creator
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {!payment && (
-                      <button
-                        onClick={() => handleInitiateEscrow(collabId)}
-                        className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
-                      >
-                        <DollarSign className="w-3.5 h-3.5" /> Deposit Escrow
-                      </button>
-                    )}
-
-                    {payment && payment.status === 'escrowed' && status === 'completed' && (
-                      <button
-                        onClick={() => handleReleaseEscrow(payment._id || payment.id)}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
-                      >
-                        <CheckCheck className="w-3.5 h-3.5" /> Release Escrow Payout
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Stepper Progress Bar */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 py-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center text-[10px] font-bold">
-                    <div className="py-1.5 px-1 rounded-xl bg-pink-100 text-pink-700">1. Agreed</div>
-                    <div className={`py-1.5 px-1 rounded-xl ${['content_in_progress', 'content_submitted', 'revision_requested', 'brand_approved', 'completed'].includes(status) ? 'bg-pink-100 text-pink-700' : 'bg-white text-slate-400'}`}>
-                      2. Production
-                    </div>
-                    <div className={`py-1.5 px-1 rounded-xl ${['content_submitted', 'brand_approved', 'completed'].includes(status) ? 'bg-pink-100 text-pink-700' : status === 'revision_requested' ? 'bg-rose-100 text-rose-700' : 'bg-white text-slate-400'}`}>
-                      3. Submitted
-                    </div>
-                    <div className={`py-1.5 px-1 rounded-xl ${['brand_approved', 'completed'].includes(status) ? 'bg-purple-100 text-purple-700' : 'bg-white text-slate-400'}`}>
-                      4. Approved
-                    </div>
-                    <div className={`py-1.5 px-1 rounded-xl ${status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-400'}`}>
-                      5. Completed
+                    {/* Escrow Workflow Timeline */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 text-center text-[10px] font-bold">
+                      <div className="py-2 px-1.5 rounded-xl bg-purple-100/80 text-purple-800 border border-purple-200/60">
+                        1. Agreement Finalized
+                      </div>
+                      <div className={`py-2 px-1.5 rounded-xl border ${
+                        payment && payment.status !== 'pending'
+                          ? 'bg-purple-100/80 text-purple-800 border-purple-200/60'
+                          : 'bg-white/80 text-slate-400 border-slate-200'
+                      }`}>
+                        2. Escrow Funded
+                      </div>
+                      <div className={`py-2 px-1.5 rounded-xl border ${
+                        ['content_submitted', 'revision_requested', 'brand_approved', 'completed'].includes(status)
+                          ? 'bg-purple-100/80 text-purple-800 border-purple-200/60'
+                          : 'bg-white/80 text-slate-400 border-slate-200'
+                      }`}>
+                        3. Content Submitted
+                      </div>
+                      <div className={`py-2 px-1.5 rounded-xl border ${
+                        ['brand_approved', 'completed'].includes(status)
+                          ? 'bg-purple-100/80 text-purple-800 border-purple-200/60'
+                          : 'bg-white/80 text-slate-400 border-slate-200'
+                      }`}>
+                        4. Brand Approved
+                      </div>
+                      <div className={`py-2 px-1.5 rounded-xl border ${
+                        payment?.status === 'released' || status === 'completed'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-white/80 text-slate-400 border-slate-200'
+                      }`}>
+                        5. Payment Released
+                      </div>
                     </div>
                   </div>
 
@@ -268,7 +328,19 @@ export const BrandActiveCollaborations: React.FC = () => {
                       Deadline: <span className="font-bold text-slate-800">{deadlineStr}</span>
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setReportTarget({
+                          id: String(collab.creatorId?._id || collab.creatorId),
+                          name: collab.creatorName || 'Creator'
+                        })}
+                        disabled={!collab.creatorId?._id && !collab.creatorId}
+                        className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Report Creator"
+                      >
+                        <Flag className="w-3.5 h-3.5" /> Report Creator
+                      </button>
+
                       {status === 'content_submitted' && (
                         <>
                           <button
@@ -374,6 +446,23 @@ export const BrandActiveCollaborations: React.FC = () => {
           collabId={selectedCollabForReview.collabId}
           onSuccess={() => {
             fetchCollaborationsAndPayments();
+          }}
+        />
+      )}
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole="creator"
+          onSubmit={async (data) => {
+            try {
+              await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
           }}
         />
       )}

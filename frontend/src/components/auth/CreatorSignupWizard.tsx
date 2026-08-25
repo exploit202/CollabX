@@ -247,7 +247,7 @@ export const CreatorSignupWizard: React.FC = () => {
       const res = await requestCreatorOtp();
       if (res.success) {
         setOtpSent(true);
-        setOtpSuccessMsg(res.message || `Verification code sent to ${creator?.email || basicInfo.email}.`);
+        setOtpSuccessMsg(`Verification code sent successfully to ${creator?.email || basicInfo.email}. Please check your inbox.`);
       }
     } catch (err: any) {
       setOtpError(err.message || 'Failed to send verification email. Please try again.');

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { SkeletonLoader } from '../../components/common/SkeletonLoader';
 import { CreateCampaignModal } from '../../components/modals/CreateCampaignModal';
 import {
   getBrandDashboard,
@@ -26,12 +27,16 @@ import {
   DollarSign,
   Star,
   Users,
-  Award
+  Award,
+  Sparkles,
+  Bell
 } from 'lucide-react';
+import { formatRelativeTime } from '../../utils/dateTime';
+import { getNotificationRoute } from '../../utils/notificationRoutes';
 
 export const BrandDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formatCurrency } = useApp();
+  const { formatCurrency, notifications, markNotificationRead } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -80,42 +85,49 @@ export const BrandDashboard: React.FC = () => {
   const companyName = user?.companyName || dashboardData?.brand?.name || user?.name || 'Your Brand';
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 md:p-8 rounded-3xl shadow-xl">
-        <div className="space-y-2">
-          <Badge variant="pink" className="bg-pink-500/20 text-pink-300 border-pink-500/30">
-            Brand Workspace
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Welcome back, {companyName}!
-          </h1>
-          <p className="text-xs text-slate-300 max-w-lg">
-            Manage your active influencer campaigns, review pending creator invitations, and track analytics performance.
-          </p>
-        </div>
+    <div className="space-y-8 animate-fade-in">
+      {/* Brand Workspace Hero Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-950 to-indigo-950 text-white p-7 md:p-9 rounded-3xl shadow-2xl border border-slate-800">
+        {/* Ambient Light Accents */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-5 py-3 bg-[#EC4899] hover:bg-pink-600 text-white font-bold text-xs rounded-xl transition-all shadow-lg flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Create Campaign
-          </button>
-          <Link
-            to="/brand/discover"
-            className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-2"
-          >
-            <Search className="w-4 h-4" />
-            Discover Creators
-          </Link>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[11px] font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" /> Enterprise Brand Command Center
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight">
+              Welcome back, <span className="bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">{companyName}</span>!
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+              Manage your active influencer campaigns, review pending creator invitations, inspect content deliverables, and release secure escrow payouts.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-5 py-3 bg-gradient-to-r from-[#EC4899] to-[#8B5CF6] hover:opacity-95 text-white font-bold text-xs rounded-2xl transition-all shadow-lg hover:shadow-pink-500/25 flex items-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Create Campaign
+            </button>
+            <Link
+              to="/brand/discover"
+              className="px-4.5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-2xl transition-all border border-white/20 backdrop-blur-md flex items-center gap-2 active:scale-95"
+            >
+              <Search className="w-4 h-4" />
+              Discover Creators
+            </Link>
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+        <div className="space-y-6">
+          <SkeletonLoader variant="stat" count={4} />
+          <SkeletonLoader variant="card" count={2} />
         </div>
       ) : (
         <>
@@ -178,16 +190,46 @@ export const BrandDashboard: React.FC = () => {
             <Card className="lg:col-span-2 p-5 border-slate-200/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">Quick Actions</h2>
-                  <p className="text-xs text-slate-500 mt-1">Move your next collaboration forward.</p>
+                  <h2 className="text-sm font-bold text-slate-900">Recent Notifications & Activity</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Latest updates from your creators, campaigns, and escrow.</p>
                 </div>
-                <MessageSquare className="w-5 h-5 text-pink-500"/>
+                <Link to="/brand/notifications" className="text-xs font-bold text-[#EC4899] hover:underline flex items-center gap-1">
+                  View all <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-                <button onClick={() => setShowCreateModal(true)} className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Create campaign</button>
-                <Link to="/brand/discover" className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Find creators</Link>
-                <Link to="/brand/collaborations" className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Active collabs</Link>
-                <Link to="/brand/saved-creators" className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 text-center transition-all">Shortlisted</Link>
+
+              <div className="space-y-2.5 mt-4">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No recent notifications.</p>
+                ) : (
+                  notifications.slice(0, 5).map((n: any) => {
+                    const isUnread = !n.read && !n.isRead;
+                    const nid = n._id || n.id;
+                    return (
+                      <Link
+                        key={nid}
+                        to={getNotificationRoute(n, 'brand')}
+                        onClick={() => markNotificationRead(nid)}
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                          isUnread
+                            ? 'bg-pink-50/50 border-pink-200 hover:bg-pink-50'
+                            : 'bg-slate-50/70 border-slate-100 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isUnread && <span className="w-2 h-2 rounded-full bg-[#EC4899] shrink-0" />}
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-900 block truncate">{n.title || n.message}</span>
+                            <span className="text-slate-500 text-[11px] block truncate">{n.message}</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-3">
+                          {formatRelativeTime(n.createdAt || n.timestamp)}
+                        </span>
+                      </Link>
+                    );
+                  })
+                )}
               </div>
             </Card>
 

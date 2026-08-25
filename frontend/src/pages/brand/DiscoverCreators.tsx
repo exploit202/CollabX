@@ -4,8 +4,11 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Avatar } from '../../components/common/Avatar';
+import { SkeletonLoader } from '../../components/common/SkeletonLoader';
 import { SendInvitationModal } from '../../components/modals/SendInvitationModal';
-import { getDiscoverCreators } from '../../lib/api';
+import { ReportUserModal } from '../../components/modals/ReportUserModal';
+import { getDiscoverCreators, reportCreator } from '../../lib/api';
 import {
   Search,
   Star,
@@ -19,11 +22,12 @@ import {
   MapPin,
   Package,
   Clock,
-  Loader2
+  Loader2,
+  Flag
 } from 'lucide-react';
 
 export const DiscoverCreators: React.FC = () => {
-  const { savedCreatorIds, toggleSaveCreator, formatCurrency } = useApp();
+  const { savedCreatorIds, toggleSaveCreator, formatCurrency, addToast } = useApp();
   const { isGuest } = useAuth();
   const [searchParams] = useSearchParams();
   const queryFromUrl = searchParams.get('q') || '';
@@ -36,6 +40,7 @@ export const DiscoverCreators: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [minEngagement, setMinEngagement] = useState<number>(0);
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
   const [sortBy, setSortBy] = useState('match');
 
   const [creators, setCreators] = useState<any[]>([]);
@@ -135,22 +140,22 @@ export const DiscoverCreators: React.FC = () => {
         <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Available creators</p><p className="text-xl font-black mt-1">{creators.length}</p></Card>
         <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Verified</p><p className="text-xl font-black mt-1 text-[#EC4899]">{creators.filter(c => c.verified).length}</p></Card>
         <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Avg. rating</p><p className="text-xl font-black mt-1 text-amber-500">{calculateAvgRating()}</p></Card>
-        <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Starting rate</p><p className="text-xl font-black mt-1">₹{(creators.length > 0 ? Math.min(...creators.map(c=>c.minStartingPrice || 5000)) : 5000).toLocaleString('en-IN')}</p></Card>
+        <Card className="p-4"><p className="text-[10px] font-bold uppercase text-slate-400">Starting rate</p><p className="text-xl font-black mt-1">{formatCurrency(creators.length > 0 ? Math.min(...creators.map(c=>c.minStartingPrice || 5000)) : 5000)}</p></Card>
       </div>
 
       {/* Filter Bar */}
-      <Card className="p-4 border-slate-200/80 space-y-4">
+      <Card className="p-5 border-slate-200/90 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-3">
           {/* Search Box */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Search by creator name, niche, bio keywords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onBlur={handleSearchBlur}
-              className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 font-medium"
+              className="w-full text-xs bg-slate-50 border border-slate-200/90 rounded-2xl pl-10 pr-3.5 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 font-semibold transition-all"
             />
           </div>
 
@@ -158,7 +163,7 @@ export const DiscoverCreators: React.FC = () => {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500"
+            className="text-xs bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-3 text-slate-800 font-extrabold focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 cursor-pointer"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -171,7 +176,7 @@ export const DiscoverCreators: React.FC = () => {
           <select
             value={selectedPlatform}
             onChange={(e) => setSelectedPlatform(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold capitalize focus:outline-none focus:ring-2 focus:ring-pink-500"
+            className="text-xs bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-3 text-slate-800 font-extrabold capitalize focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 cursor-pointer"
           >
             {platforms.map((plat) => (
               <option key={plat} value={plat}>
@@ -184,7 +189,7 @@ export const DiscoverCreators: React.FC = () => {
           <select
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500"
+            className="text-xs bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-3 text-slate-800 font-extrabold focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 cursor-pointer"
           >
             {locations.map((loc) => (
               <option key={loc} value={loc}>
@@ -195,13 +200,13 @@ export const DiscoverCreators: React.FC = () => {
         </div>
 
         {/* Range Sliders & Clear */}
-        <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+        <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Pricing Filter</label>
+            <label className="block text-[11px] font-extrabold text-slate-600 mb-1">Pricing Filter</label>
             <select
               value={priceRange}
               onChange={(e) => setPriceRange(e.target.value)}
-              className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className="w-full text-xs bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-2.5 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
               <option value="All">All Ranges</option>
               <option value="0-10k">₹0 – ₹10,000</option>
@@ -212,9 +217,9 @@ export const DiscoverCreators: React.FC = () => {
           </div>
 
           <div>
-            <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+            <div className="flex justify-between text-[11px] font-extrabold text-slate-600 mb-1">
               <span>Min Audience Reach</span>
-              <span className="text-[#EC4899] font-bold">{(minFollowers / 1000).toFixed(0)}K+</span>
+              <span className="text-[#EC4899] font-black">{(minFollowers / 1000).toFixed(0)}K+</span>
             </div>
             <input
               type="range"
@@ -223,14 +228,14 @@ export const DiscoverCreators: React.FC = () => {
               step="50000"
               value={minFollowers}
               onChange={(e) => setMinFollowers(Number(e.target.value))}
-              className="w-full accent-[#EC4899]"
+              className="w-full accent-[#EC4899] cursor-pointer"
             />
           </div>
 
           <div>
-            <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
+            <div className="flex justify-between text-[11px] font-extrabold text-slate-600 mb-1">
               <span>Min Engagement Rate</span>
-              <span className="text-[#EC4899] font-bold">{minEngagement}%+</span>
+              <span className="text-[#EC4899] font-black">{minEngagement}%+</span>
             </div>
             <input
               type="range"
@@ -239,17 +244,17 @@ export const DiscoverCreators: React.FC = () => {
               step="0.5"
               value={minEngagement}
               onChange={(e) => setMinEngagement(Number(e.target.value))}
-              className="w-full accent-[#EC4899]"
+              className="w-full accent-[#EC4899] cursor-pointer"
             />
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-[11px] font-extrabold text-slate-600 cursor-pointer">
               <input
                 type="checkbox"
                 checked={verifiedOnly}
                 onChange={(e) => setVerifiedOnly(e.target.checked)}
-                className="w-3.5 h-3.5 rounded accent-[#EC4899]"
+                className="w-4 h-4 rounded accent-[#EC4899] cursor-pointer"
               />
               Verified only
             </label>
@@ -264,7 +269,7 @@ export const DiscoverCreators: React.FC = () => {
                 setMinEngagement(0);
                 setVerifiedOnly(false);
               }}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800 underline shrink-0"
+              className="text-xs font-bold text-slate-500 hover:text-slate-900 underline shrink-0 cursor-pointer"
             >
               Reset All
             </button>
@@ -272,10 +277,10 @@ export const DiscoverCreators: React.FC = () => {
         </div>
 
         {recentSearches.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Recent searches</span>
+          <div className="flex flex-wrap gap-2 items-center pt-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Recent searches</span>
             {recentSearches.map(term => (
-              <button key={term} onClick={() => setSearchQuery(term)} className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-pink-50 hover:text-pink-600">
+              <button key={term} onClick={() => setSearchQuery(term)} className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-slate-100/90 text-slate-700 hover:bg-pink-50 hover:text-[#EC4899] transition-all cursor-pointer">
                 {term}
               </button>
             ))}
@@ -284,9 +289,7 @@ export const DiscoverCreators: React.FC = () => {
       </Card>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
-        </div>
+        <SkeletonLoader variant="card" count={6} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {creators.length === 0 ? (
@@ -308,10 +311,12 @@ export const DiscoverCreators: React.FC = () => {
                     {/* Header identity info */}
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={creator.avatar}
-                          alt={creator.name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-xs shrink-0 ring-2 ring-slate-100"
+                        <Avatar
+                          src={creator.profileImage?.url || creator.userId?.profileImage || creator.avatar || null}
+                          name={creator.name}
+                          size="w-12 h-12"
+                          textSize="text-sm"
+                          className="border-2 border-white shadow-xs shrink-0 ring-2 ring-slate-100"
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
@@ -327,18 +332,28 @@ export const DiscoverCreators: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Bookmark Button */}
+                      {/* Top Action Buttons (Save & Report) */}
                       {!isGuest && (
-                        <button
-                          onClick={() => toggleSaveCreator(cid)}
-                          className={`p-1.5 rounded-xl border transition-colors ${
-                            isSaved
-                              ? 'bg-pink-50 border-pink-200 text-[#EC4899]'
-                              : 'border-slate-200 text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#EC4899]' : ''}`} />
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => setReportTarget({ id: cid, name: creator.name })}
+                            className="p-1.5 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-colors"
+                            title="Report Creator"
+                          >
+                            <Flag className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => toggleSaveCreator(cid)}
+                            className={`p-1.5 rounded-xl border transition-colors ${
+                              isSaved
+                                ? 'bg-pink-50 border-pink-200 text-[#EC4899]'
+                                : 'border-slate-200 text-slate-400 hover:text-slate-600'
+                            }`}
+                            title={isSaved ? 'Remove from Saved' : 'Save Creator'}
+                          >
+                            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-[#EC4899]' : ''}`} />
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -438,6 +453,23 @@ export const DiscoverCreators: React.FC = () => {
         onClose={() => setSelectedCreatorForInvite(null)}
         creator={selectedCreatorForInvite}
       />
+
+      {reportTarget && (
+        <ReportUserModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetName={reportTarget.name}
+          targetRole="creator"
+          onSubmit={async (data) => {
+            try {
+              await reportCreator({ reportedAgainst: reportTarget.id, ...data });
+              addToast('success', 'Report Submitted', `Your report against ${reportTarget.name} has been submitted for admin review.`);
+            } catch (err: any) {
+              addToast('error', 'Report Failed', err?.message || 'Failed to submit report.');
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
