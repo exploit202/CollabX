@@ -43,11 +43,11 @@ export const BrandNotifications: React.FC = () => {
     refreshAppData().finally(() => setLoading(false));
   }, [refreshAppData]);
 
-  const unreadCount = notifications.filter((n: any) => !n.isRead && !n.read).length;
+  const unreadCount = notifications.filter((n: any) => !n.isRead).length;
 
   const filteredNotifications = useMemo(() => {
     if (filter === 'unread') {
-      return notifications.filter((n: any) => !n.isRead && !n.read);
+      return notifications.filter((n: any) => !n.isRead);
     }
     return notifications;
   }, [notifications, filter]);
@@ -121,10 +121,10 @@ export const BrandNotifications: React.FC = () => {
             </Card>
           ) : (
             filteredNotifications.map((n) => {
-              const nid = n._id || n.id;
-              const isUnread = !n.isRead && !n.read;
-              const relativeTime = formatRelativeTime(n.createdAt || n.timestamp);
-              const fullTime = formatNotificationDateTime(n.createdAt || n.timestamp);
+              const nid = n._id;
+              const isUnread = !n.isRead;
+              const relativeTime = formatRelativeTime(n.createdAt);
+              const fullTime = formatNotificationDateTime(n.createdAt);
 
               return (
                 <Card
@@ -163,7 +163,7 @@ export const BrandNotifications: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{n.message || n.text}</p>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{n.message}</p>
                   </div>
 
                   {isUnread && (

@@ -120,10 +120,10 @@ export const CreatorNotifications: React.FC = () => {
             </Card>
           ) : (
             filteredNotifications.map((n) => {
-              const nid = n._id || n.id;
-              const isUnread = !n.isRead && !n.read;
-              const relativeTime = formatRelativeTime(n.createdAt || n.timestamp);
-              const fullTime = formatNotificationDateTime(n.createdAt || n.timestamp);
+              const nid = n._id;
+              const isUnread = !n.isRead;
+              const relativeTime = formatRelativeTime(n.createdAt);
+              const fullTime = formatNotificationDateTime(n.createdAt);
 
               return (
                 <Card
@@ -162,7 +162,7 @@ export const CreatorNotifications: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{n.message || n.text}</p>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{n.message}</p>
                   </div>
 
                   {isUnread && (

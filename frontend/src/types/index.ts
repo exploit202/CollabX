@@ -207,13 +207,16 @@ export interface Collaboration {
 }
 
 export interface AppNotification {
-  id: string;
+  _id?: string;
+  id?: string;
   userId: string;
   title: string;
   message: string;
   type: 'invitation' | 'negotiation' | 'collaboration' | 'campaign' | 'system';
-  read: boolean;
-  timestamp: string;
+  isRead?: boolean;
+  read?: boolean;
+  createdAt?: string;
+  timestamp?: string;
   link?: string;
 }
 

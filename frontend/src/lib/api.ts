@@ -188,7 +188,7 @@ export const getBrandInvitations = () =>
   request<{ success: boolean; data: any[] }>('/api/brand/invitations');
 
 export const createInvitation = (data: any) =>
-  request<{ success: boolean; data: any }>('/api/brand/invitations', {
+  request<{ success: boolean; message?: string; data: any }>('/api/brand/invitations', {
     method: 'POST',
     body: JSON.stringify(data)
   });
@@ -304,7 +304,7 @@ export const changeBrandPassword = (data: {
 // CONTENT CREATOR APIS
 // ==========================================
 export const getCreatorProfile = () =>
-  request<{ success: boolean; data: { profile: any } }>('/api/creator/profile');
+  request<{ success: boolean; data: { user: any; profile: any } }>('/api/creator/profile');
 
 export const updateCreatorProfile = (data: any) =>
   request<{ success: boolean; data: { profile: any } }>('/api/creator/profile', {
@@ -398,10 +398,10 @@ export const deletePricing = (id: string) =>
   });
 
 export const getReviews = (creatorId?: string) =>
-  request<{ success: boolean; data: any[] }>(`/api/creator/reviews${creatorId ? `?creatorId=${creatorId}` : ''}`);
+  request<{ success: boolean; data: { reviews: any[]; total: number; average: number; distribution: any[] } }>(`/api/creator/reviews${creatorId ? `?creatorId=${creatorId}` : ''}`);
 
 export const createReview = (data: { collaborationId: string; rating: number; review: string }) =>
-  request<{ success: boolean; data: any }>('/api/creator/reviews', {
+  request<{ success: boolean; message?: string; data: any }>('/api/creator/reviews', {
     method: 'POST',
     body: JSON.stringify(data)
   });
